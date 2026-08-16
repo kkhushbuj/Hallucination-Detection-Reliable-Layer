@@ -33,6 +33,10 @@ if st.button("Get Answer & Check Trust", type="primary"):
 
         verification = result["verification_result"]
 
+        if verification.get("failed_generations"):
+            with st.expander("Debug: raw generation errors"):
+                st.write(verification["failed_generations"])
+
         st.markdown("### Answer")
         st.write(verification["winner_answer"].replace("$", "\\$"))
 
