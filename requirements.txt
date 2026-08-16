@@ -1,6 +1,6 @@
 streamlit
 langgraph
-openai
+openai<3
 anthropic
 mistralai
 google-genai
