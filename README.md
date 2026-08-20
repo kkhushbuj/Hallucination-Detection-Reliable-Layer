@@ -14,7 +14,7 @@ Ask it any question. Instead of just returning an answer, it tells you:
 
 1. **Generate** — the base model (OpenAI `gpt-4o-mini`) answers the same question 3 separate times at a fixed temperature (0.9), following the standard published "self-consistency" technique.
 
-2. **Judge** — each of the 3 answers is independently checked by 3 different models from 3 different labs — **Claude, Gemini, and Mistral** — each verifying whether that specific answer looks correct or hallucinated. The model that generates answers never judges its own work.
+2. **Judge** — each of the 3 answers is independently checked by 3 different models — **GPT-OSS-120B (via Groq), Gemini, and Mistral** — each verifying whether that specific answer looks correct or hallucinated. The model that generates answers never judges its own work.
 
 3. **Check consistency** — the 3 original answers are compared against each other using NLI (natural language inference — checking whether two answers logically agree, not just whether they're worded similarly), to measure how consistent the model was with itself.
 
@@ -53,6 +53,8 @@ The 23-point gap between correct and incorrect answers is the key result — it 
 
 HaluEval is the hardest category by design — its questions are built from multi-hop trivia requiring several chained, obscure facts, which is a limitation of the base model's raw knowledge rather than the scoring system.
 
+*Note: these numbers were measured with Claude as the judge/consistency-checker model (the setup used at evaluation time). The app has since switched to GPT-OSS-120B via Groq in that role; results have not yet been re-measured against the new configuration.*
+
 **Confidence thresholds** were calibrated from this real data (not guessed):
 - High confidence: Trust Score ≥ 80%
 - Medium confidence: Trust Score ≥ 75%
@@ -66,7 +68,7 @@ HaluEval is the hardest category by design — its questions are built from mult
 
 ## Tech stack
 
-Python, LangGraph (pipeline orchestration), LangSmith (tracing), OpenAI / Claude / Gemini / Mistral APIs, Streamlit (UI)
+Python, LangGraph (pipeline orchestration), LangSmith (tracing), OpenAI / Groq / Gemini / Mistral APIs, Streamlit (UI)
 
 ## Project structure
 
