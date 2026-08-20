@@ -44,7 +44,13 @@ def cluster_answers(answers: list[str]) -> list[list[int]]:
         cluster = [i]
         assigned[i] = True
         for j in range(i + 1, n):
-            if not assigned[j] and check_entailment(answers[i], answers[j]):
+            if assigned[j]:
+                continue
+            try:
+                agrees = check_entailment(answers[i], answers[j])
+            except Exception:
+                agrees = False
+            if agrees:
                 cluster.append(j)
                 assigned[j] = True
         clusters.append(cluster)
