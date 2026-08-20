@@ -1,15 +1,15 @@
 import os
 import math
 from dotenv import load_dotenv
-import anthropic
+from groq import Groq
 
 load_dotenv()
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def check_entailment(answer_a: str, answer_b: str) -> bool:
-    """Ask Claude if two answers logically agree on the same core conclusion."""
+    """Ask a model if two answers logically agree on the same core conclusion."""
     prompt = (
         f"Answer A: {answer_a}\n\n"
         f"Answer B: {answer_b}\n\n"
@@ -22,13 +22,13 @@ def check_entailment(answer_a: str, answer_b: str) -> bool:
         "Respond with ONLY the single word YES or the single word NO. "
         "Do not include any explanation or other text."
     )
-    response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    response = client.chat.completions.create(
+        model="openai/gpt-oss-120b",
         max_tokens=10,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
     )
-    result_text = response.content[0].text.strip().upper()
+    result_text = response.choices[0].message.content.strip().upper()
     return "YES" in result_text
 
 

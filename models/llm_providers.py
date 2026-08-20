@@ -2,14 +2,14 @@ import os
 import re
 from dotenv import load_dotenv
 import openai
-import anthropic
+from groq import Groq
 from mistralai.client import Mistral
 from google import genai
 
 load_dotenv()
 
 openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -40,15 +40,16 @@ def call_model(provider: str, model: str, question: str, temperature: float = 0.
         )
         return _strip_thinking(response.choices[0].message.content)
 
-    elif provider == "anthropic":
-        response = anthropic_client.messages.create(
+    elif provider == "groq":
+        response = groq_client.chat.completions.create(
             model=model,
-            max_tokens=1024,
-            system=SYSTEM_INSTRUCTION,
-            messages=[{"role": "user", "content": question}],
+            messages=[
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": question},
+            ],
             temperature=temperature,
         )
-        return _strip_thinking(response.content[0].text)
+        return _strip_thinking(response.choices[0].message.content)
 
     elif provider == "mistral":
         response = mistral_client.chat.complete(
