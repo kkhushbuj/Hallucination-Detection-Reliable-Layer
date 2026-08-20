@@ -24,7 +24,7 @@ def check_entailment(answer_a: str, answer_b: str) -> bool:
     )
     response = client.chat.completions.create(
         model="openai/gpt-oss-120b",
-        max_tokens=10,
+        max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
     )
