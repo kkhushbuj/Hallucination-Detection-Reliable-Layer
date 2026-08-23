@@ -5,7 +5,7 @@ import json
 import time
 import random
 import requests
-import anthropic
+from groq import Groq
 from dotenv import load_dotenv
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,7 +14,7 @@ load_dotenv()
 
 from graph import build_graph
 
-judge_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+judge_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def load_truthfulqa(path="evaluation/datasets/truthfulqa_full.csv", n=67, seed=42):
@@ -99,13 +99,13 @@ def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
         "factual conclusion matches.\n\n"
         "Respond with exactly one word: YES or NO."
     )
-    response = judge_client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=10,
+    response = judge_client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
     )
-    answer = response.content[0].text.strip().upper()
+    answer = response.choices[0].message.content.strip().upper()
     return answer.startswith("YES")
 
 
@@ -188,7 +188,7 @@ def summarize(results):
     avg_trust_incorrect = sum(r["trust_score"] for r in incorrect_results) / len(incorrect_results) if incorrect_results else 0
 
     print("\n" + "=" * 50)
-    print("EVALUATION SUMMARY (Full 200, Claude correctness-checker)")
+    print("EVALUATION SUMMARY (Full 200, Groq GPT-OSS-120B correctness-checker)")
     print("=" * 50)
     print(f"Total questions evaluated: {total}")
     print(f"Model answer accuracy: {overall_accuracy:.1f}% ({len(correct_results)}/{total})")
@@ -204,13 +204,13 @@ def summarize(results):
             acc = len(source_correct) / len(source_results) * 100
             print(f"  {source}: {acc:.1f}% accuracy ({len(source_correct)}/{len(source_results)})")
 
-    with open("evaluation/results_v4_claude_checker.csv", "w", newline="", encoding="utf-8") as f:
+    with open("evaluation/results_final.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["question", "source", "model_answer", "best_answer", "trust_score", "label", "flagged_count", "majority_flagged", "correct"])
         writer.writeheader()
         for r in results:
             writer.writerow(r)
 
-    print("\nDetailed results saved to evaluation/results_v4_claude_checker.csv")
+    print("\nDetailed results saved to evaluation/results_final.csv")
 
 
 if __name__ == "__main__":
