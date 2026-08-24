@@ -23,7 +23,7 @@ def check_entailment(answer_a: str, answer_b: str) -> bool:
         "Do not include any explanation or other text."
     )
     response = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model="openai/gpt-oss-20b",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,

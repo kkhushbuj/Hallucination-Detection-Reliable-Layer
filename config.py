@@ -9,7 +9,7 @@ MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 VOTING_MODELS = [
-    {"provider": "groq", "model": "openai/gpt-oss-120b"},
+    {"provider": "groq", "model": "openai/gpt-oss-20b"},
     {"provider": "gemini", "model": "gemini-3.5-flash"},
     {"provider": "mistral", "model": "mistral-small-latest"},
 ]

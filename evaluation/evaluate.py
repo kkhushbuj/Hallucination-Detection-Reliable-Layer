@@ -100,7 +100,7 @@ def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
         "Respond with exactly one word: YES or NO."
     )
     response = judge_client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model="openai/gpt-oss-20b",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
@@ -188,7 +188,7 @@ def summarize(results):
     avg_trust_incorrect = sum(r["trust_score"] for r in incorrect_results) / len(incorrect_results) if incorrect_results else 0
 
     print("\n" + "=" * 50)
-    print("EVALUATION SUMMARY (Full 200, Groq GPT-OSS-120B correctness-checker)")
+    print("EVALUATION SUMMARY (Full 200, Groq GPT-OSS-20B correctness-checker)")
     print("=" * 50)
     print(f"Total questions evaluated: {total}")
     print(f"Model answer accuracy: {overall_accuracy:.1f}% ({len(correct_results)}/{total})")
