@@ -104,6 +104,7 @@ def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
+        reasoning_effort="low",
     )
     answer = response.choices[0].message.content.strip().upper()
     return answer.startswith("YES")

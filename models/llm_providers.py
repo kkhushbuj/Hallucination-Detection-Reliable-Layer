@@ -48,6 +48,7 @@ def call_model(provider: str, model: str, question: str, temperature: float = 0.
                 {"role": "user", "content": question},
             ],
             temperature=temperature,
+            reasoning_effort="low",
         )
         return _strip_thinking(response.choices[0].message.content)
 
