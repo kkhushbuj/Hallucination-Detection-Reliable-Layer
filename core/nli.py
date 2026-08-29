@@ -27,6 +27,7 @@ def check_entailment(answer_a: str, answer_b: str) -> bool:
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
+        reasoning_effort="low",
     )
     result_text = response.choices[0].message.content.strip().upper()
     return "YES" in result_text
