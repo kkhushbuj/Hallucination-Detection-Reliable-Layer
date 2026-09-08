@@ -53,7 +53,7 @@ def load_halueval(path="evaluation/datasets/halueval_qa.json", n=67, seed=42):
     return random.sample(rows, min(n, len(rows)))
 
 
-def load_triviaqa(n=66, seed=42):
+def load_triviaqa(n=66, seed=42, max_retries=4):
     url = "https://datasets-server.huggingface.co/rows"
     params = {
         "dataset": "mandarjoshi/trivia_qa",
@@ -62,8 +62,21 @@ def load_triviaqa(n=66, seed=42):
         "offset": 0,
         "length": min(n * 3, 100),
     }
-    response = requests.get(url, params=params)
-    data = response.json()
+
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            break
+        except (requests.exceptions.RequestException, ValueError) as e:
+            last_error = e
+            wait = 2 ** attempt  # 2s, 4s, 8s, 16s
+            print(f"  TriviaQA fetch attempt {attempt}/{max_retries} failed ({e}); retrying in {wait}s...")
+            time.sleep(wait)
+    else:
+        raise RuntimeError(f"Failed to fetch TriviaQA data after {max_retries} attempts") from last_error
 
     rows = []
     for item in data.get("rows", []):
