@@ -53,42 +53,50 @@ def load_halueval(path="evaluation/datasets/halueval_qa.json", n=67, seed=42):
     return random.sample(rows, min(n, len(rows)))
 
 
-def load_triviaqa(n=66, seed=42, max_retries=4):
-    url = "https://datasets-server.huggingface.co/rows"
-    params = {
-        "dataset": "mandarjoshi/trivia_qa",
-        "config": "rc.nocontext",
-        "split": "validation",
-        "offset": 0,
-        "length": min(n * 3, 100),
-    }
-
-    last_error = None
-    for attempt in range(1, max_retries + 1):
-        try:
-            response = requests.get(url, params=params, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            break
-        except (requests.exceptions.RequestException, ValueError) as e:
-            last_error = e
-            wait = 2 ** attempt  # 2s, 4s, 8s, 16s
-            print(f"  TriviaQA fetch attempt {attempt}/{max_retries} failed ({e}); retrying in {wait}s...")
-            time.sleep(wait)
+def load_triviaqa(n=66, seed=42, max_retries=4, cache_path="evaluation/datasets/triviaqa_cache.json"):
+    if os.path.exists(cache_path):
+        with open(cache_path, encoding="utf-8") as f:
+            rows = json.load(f)
     else:
-        raise RuntimeError(f"Failed to fetch TriviaQA data after {max_retries} attempts") from last_error
+        url = "https://datasets-server.huggingface.co/rows"
+        params = {
+            "dataset": "mandarjoshi/trivia_qa",
+            "config": "rc.nocontext",
+            "split": "validation",
+            "offset": 0,
+            "length": min(n * 3, 100),
+        }
 
-    rows = []
-    for item in data.get("rows", []):
-        row = item["row"]
-        question = row.get("question")
-        answer = row.get("answer", {}).get("value")
-        if question and answer:
-            rows.append({
-                "question": question,
-                "best_answer": answer,
-                "source": "TriviaQA",
-            })
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.get(url, params=params, timeout=30)
+                response.raise_for_status()
+                data = response.json()
+                break
+            except (requests.exceptions.RequestException, ValueError) as e:
+                last_error = e
+                wait = 2 ** attempt  # 2s, 4s, 8s, 16s
+                print(f"  TriviaQA fetch attempt {attempt}/{max_retries} failed ({e}); retrying in {wait}s...")
+                time.sleep(wait)
+        else:
+            raise RuntimeError(f"Failed to fetch TriviaQA data after {max_retries} attempts") from last_error
+
+        rows = []
+        for item in data.get("rows", []):
+            row = item["row"]
+            question = row.get("question")
+            answer = row.get("answer", {}).get("value")
+            if question and answer:
+                rows.append({
+                    "question": question,
+                    "best_answer": answer,
+                    "source": "TriviaQA",
+                })
+
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(rows, f)
 
     random.seed(seed)
     return random.sample(rows, min(n, len(rows)))
@@ -115,7 +123,7 @@ def get_batch(batch_num: int, batch_size: int = BATCH_SIZE):
     return dataset[start:end], start
 
 
-def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
+def is_correct(question: str, model_answer: str, best_answer: str, max_retries: int = 3) -> bool:
     prompt = (
         f"Question: {question}\n\n"
         f"Expected correct answer: {best_answer}\n\n"
@@ -126,15 +134,26 @@ def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
         "factual conclusion matches.\n\n"
         "Respond with exactly one word: YES or NO."
     )
-    response = judge_client.chat.completions.create(
-        model="openai/gpt-oss-20b",
-        max_tokens=300,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        reasoning_effort="low",
-    )
-    answer = response.choices[0].message.content.strip().upper()
-    return answer.startswith("YES")
+
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = judge_client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                max_tokens=300,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                reasoning_effort="low",
+            )
+            answer = response.choices[0].message.content.strip().upper()
+            return answer.startswith("YES")
+        except Exception as e:
+            last_error = e
+            wait = 2 ** attempt  # 2s, 4s, 8s
+            print(f"    is_correct attempt {attempt}/{max_retries} failed ({e}); retrying in {wait}s...")
+            time.sleep(wait)
+
+    raise RuntimeError(f"is_correct failed after {max_retries} attempts") from last_error
 
 
 def run_evaluation(dataset, global_offset=0, total_overall=200):
