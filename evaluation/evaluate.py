@@ -283,6 +283,69 @@ def run_batch(batch_num: int):
     summarize(results, out_path=out_path, title=f"BATCH {batch_num} SUMMARY (questions {offset + 1}-{offset + len(dataset)})")
 
 
+def evaluate_one(trust_graph, question, best_answer, source):
+    """Run the full pipeline + correctness check for a single question. Raises on failure."""
+    result = trust_graph.invoke({"question": question})
+    verification = result["verification_result"]
+
+    model_answer = verification["winner_answer"]
+    per_answer = verification.get("per_answer", [])
+    flagged_count = sum(1 for a in per_answer if a["any_hallucinated"])
+    total_answers = len(per_answer)
+
+    return {
+        "question": question,
+        "source": source,
+        "model_answer": model_answer,
+        "best_answer": best_answer,
+        "trust_score": verification["trust_score"],
+        "label": verification["label"],
+        "flagged_count": f"{flagged_count}/{total_answers}",
+        "majority_flagged": flagged_count > total_answers / 2 if total_answers > 0 else False,
+        "correct": is_correct(question, model_answer, best_answer),
+    }
+
+
+def run_backfill():
+    """Re-run only the failed (empty trust_score) rows across all batch CSVs, updating them in place."""
+    trust_graph = build_graph()
+    total_fixed = 0
+    total_still_failing = 0
+
+    for b in range(1, NUM_BATCHES + 1):
+        path = f"evaluation/results_batch{b}.csv"
+        if not os.path.exists(path):
+            print(f"Batch {b}: no CSV, skipping.")
+            continue
+
+        rows = load_csv(path)
+        failed_idx = [i for i, r in enumerate(rows) if r["trust_score"] is None]
+        if not failed_idx:
+            print(f"Batch {b}: no failed rows.")
+            continue
+
+        print(f"\n=== Batch {b}: retrying {len(failed_idx)} failed question(s) ===")
+        for i in failed_idx:
+            q = rows[i]["question"]
+            print(f"  ({rows[i]['source']}) {q}")
+            try:
+                rows[i] = evaluate_one(trust_graph, q, rows[i]["best_answer"], rows[i]["source"])
+                print(f"    -> Trust Score: {rows[i]['trust_score']}% | Correct: {rows[i]['correct']}")
+                total_fixed += 1
+            except Exception as e:
+                print(f"    -> STILL FAILING: {e}")
+                total_still_failing += 1
+            time.sleep(1)
+
+        save_csv(rows, path)
+        print(f"Batch {b}: saved.")
+
+    print(f"\nBackfill complete: {total_fixed} fixed, {total_still_failing} still failing.")
+    if total_still_failing == 0:
+        print("Running merge for the complete 200-question result...\n")
+        merge_batches()
+
+
 def merge_batches():
     all_results = []
     missing = []
@@ -303,9 +366,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the 200-question evaluation in 50-question batches, or merge completed batches.")
     parser.add_argument("--batch", type=int, choices=range(1, NUM_BATCHES + 1), help="Run one 50-question batch (1-4).")
     parser.add_argument("--merge", action="store_true", help="Merge all completed result_batch*.csv files into the final summary.")
+    parser.add_argument("--backfill", action="store_true", help="Re-run only the failed rows across all batch CSVs, then merge.")
     args = parser.parse_args()
 
-    if args.merge:
+    if args.backfill:
+        run_backfill()
+    elif args.merge:
         merge_batches()
     elif args.batch:
         run_batch(args.batch)
