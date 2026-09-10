@@ -139,7 +139,7 @@ def is_correct(question: str, model_answer: str, best_answer: str, max_retries: 
     for attempt in range(1, max_retries + 1):
         try:
             response = judge_client.chat.completions.create(
-                model="openai/gpt-oss-20b",
+                model="qwen/qwen3.8-27b",
                 max_tokens=300,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0,
