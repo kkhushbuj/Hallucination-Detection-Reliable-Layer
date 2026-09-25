@@ -9,12 +9,14 @@ MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
-# Runs via Groq, sharing the same GROQ_API_KEY/quota as VOTING_MODELS - no separate key needed.
-TIE_BREAKER_MODEL = {"provider": "groq", "model": "openai/gpt-oss-20b"}
+# Llama 3.3 70B is no longer served by Groq (decommissioned), so this runs it via
+# OpenRouter instead - a different lab from the OpenAI generator, on its own key.
+TIE_BREAKER_MODEL = {"provider": "openrouter", "model": "meta-llama/llama-3.3-70b-instruct"}
 TIE_BREAKER_PENALTY = 10
 
 VOTING_MODELS = [
