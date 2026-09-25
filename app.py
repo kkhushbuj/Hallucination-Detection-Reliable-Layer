@@ -172,6 +172,12 @@ if st.button("Get Answer & Check Trust", type="primary"):
                             chips += f"<span class='judge-chip judge-disagree'>❌ {j['provider']}</span>"
                     st.markdown(chips, unsafe_allow_html=True)
 
+                    failed_judges = [j for j in a["judges"] if j["failed"]]
+                    if failed_judges:
+                        with st.expander("Show raw judge error(s)"):
+                            for j in failed_judges:
+                                st.code(f"{j['provider']}: {j.get('error', '(no error message)')}")
+
                     correct_count = sum(1 for j in a["judges"] if j["correct"])
                     total_responding = sum(1 for j in a["judges"] if not j["failed"])
 
