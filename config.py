@@ -17,9 +17,10 @@ GROQ_TIEBREAKER_API_KEY = os.getenv("GROQ_TIEBREAKER_API_KEY", GROQ_API_KEY)
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
-# Llama 3.3 70B via Groq - a different model family from the OpenAI generator, on its
-# own dedicated key/quota (GROQ_TIEBREAKER_API_KEY) rather than sharing the panel's.
-TIE_BREAKER_MODEL = {"provider": "groq", "model": "llama-3.3-70b-versatile"}
+# Llama 3.3 70B is no longer served by Groq (decommissioned) - no free/no-new-key host
+# for it was available, so this uses Groq's strongest current model instead, on its own
+# dedicated key/quota (GROQ_TIEBREAKER_API_KEY) rather than sharing the panel's.
+TIE_BREAKER_MODEL = {"provider": "groq", "model": "openai/gpt-oss-120b"}
 TIE_BREAKER_PENALTY = 10
 
 VOTING_MODELS = [
