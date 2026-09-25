@@ -43,8 +43,8 @@ def generate_temperature_answers(question: str):
     return answers, failed
 
 
-def verify_answer(question: str, answer: str, provider: str, model: str, search_context: str | None = None, max_retries: int = 2) -> bool:
-    """Ask one model to judge whether an answer is correct or hallucinated. Retries once on a rate-limit error."""
+def verify_answer(question: str, answer: str, provider: str, model: str, search_context: str | None = None, max_retries: int = 4) -> bool:
+    """Ask one model to judge whether an answer is correct or hallucinated. Retries with backoff on a rate-limit error."""
     prompt = (
         f"Question: {question}\n\n"
         f"Proposed answer: {answer}\n\n"
@@ -66,7 +66,7 @@ def verify_answer(question: str, answer: str, provider: str, model: str, search_
         except Exception as e:
             last_error = e
             if attempt < max_retries and _is_rate_limit_error(e):
-                time.sleep(2 * attempt)  # 2s, 4s, ... - only worth retrying a rate limit, not a hard failure
+                time.sleep(3 * (2 ** (attempt - 1)))  # 3s, 6s, 12s - only worth retrying a rate limit, not a hard failure
                 continue
             raise last_error
 
