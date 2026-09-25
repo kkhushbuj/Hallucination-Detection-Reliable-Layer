@@ -14,6 +14,7 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 cohere_client = cohere.ClientV2(api_key=os.getenv("COHERE_API_KEY"))
+openrouter_client = openai.OpenAI(api_key=os.getenv("OPENROUTER_API_KEY"), base_url="https://openrouter.ai/api/v1")
 
 SYSTEM_INSTRUCTION = (
     "If the user asks about something that does not exist (a fake study, "
@@ -85,6 +86,17 @@ def call_model(provider: str, model: str, question: str, temperature: float = 0.
         content = response.message.content
         text = content if isinstance(content, str) else content[0].text
         return _strip_thinking(text)
+
+    elif provider == "openrouter":
+        response = openrouter_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": question},
+            ],
+            temperature=temperature,
+        )
+        return _strip_thinking(response.choices[0].message.content)
 
     else:
         raise ValueError(f"Unknown provider: {provider}")
