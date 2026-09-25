@@ -9,18 +9,14 @@ MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
-
-# Dedicated key for the tie-breaker so it doesn't share quota with the main judge
-# panel's Groq calls (VOTING_MODELS). Falls back to GROQ_API_KEY if not set.
-GROQ_TIEBREAKER_API_KEY = os.getenv("GROQ_TIEBREAKER_API_KEY", GROQ_API_KEY)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
-# Llama 3.3 70B is no longer served by Groq (decommissioned) - no free/no-new-key host
-# for it was available, so this uses Groq's strongest current model instead, on its own
-# dedicated key/quota (GROQ_TIEBREAKER_API_KEY) rather than sharing the panel's.
-TIE_BREAKER_MODEL = {"provider": "groq", "model": "openai/gpt-oss-120b"}
+# Llama 3.3 70B is no longer served by Groq (decommissioned), so this runs it via
+# OpenRouter instead - a different lab from the OpenAI generator, on its own key.
+TIE_BREAKER_MODEL = {"provider": "openrouter", "model": "meta-llama/llama-3.3-70b-instruct"}
 TIE_BREAKER_PENALTY = 10
 
 VOTING_MODELS = [
