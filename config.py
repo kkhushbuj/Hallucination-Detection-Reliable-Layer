@@ -10,11 +10,16 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
+# Dedicated key for the tie-breaker so it doesn't share quota with the main judge
+# panel's Groq calls (VOTING_MODELS). Falls back to GROQ_API_KEY if not set.
+GROQ_TIEBREAKER_API_KEY = os.getenv("GROQ_TIEBREAKER_API_KEY", GROQ_API_KEY)
+
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
-# Runs via Groq, sharing the same GROQ_API_KEY/quota as VOTING_MODELS - no separate key needed.
-TIE_BREAKER_MODEL = {"provider": "groq", "model": "openai/gpt-oss-20b"}
+# Llama 3.3 70B via Groq - a different model family from the OpenAI generator, on its
+# own dedicated key/quota (GROQ_TIEBREAKER_API_KEY) rather than sharing the panel's.
+TIE_BREAKER_MODEL = {"provider": "groq", "model": "llama-3.3-70b-versatile"}
 TIE_BREAKER_PENALTY = 10
 
 VOTING_MODELS = [

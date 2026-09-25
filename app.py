@@ -138,10 +138,10 @@ if st.button("Get Answer & Check Trust", type="primary"):
         tie_breaker = verification.get("tie_breaker")
         if tie_breaker:
             if tie_breaker["failed"]:
-                st.caption(f"⚠️ Tie-breaker check (GPT-OSS-20B) unavailable: {friendly_error(tie_breaker.get('error', ''))}")
+                st.caption(f"⚠️ Tie-breaker check (Llama 3.3 70B) unavailable: {friendly_error(tie_breaker.get('error', ''))}")
             else:
                 verdict = "CORRECT" if tie_breaker["correct"] else "HALLUCINATED"
-                st.caption(f"Tie-breaker check (GPT-OSS-20B): {verdict}")
+                st.caption(f"Tie-breaker check (Llama 3.3 70B): {verdict}")
                 if verification.get("tie_breaker_disagreed"):
                     st.warning("⚠️ Note: an independent high-capability check disagreed with this result — treat with extra caution.")
 

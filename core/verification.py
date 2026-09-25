@@ -1,8 +1,13 @@
 import time
-from models.llm_providers import call_model
+from groq import Groq
+from models.llm_providers import call_model, SYSTEM_INSTRUCTION
 from core.nli import cluster_answers, calculate_consistency_score, get_per_answer_consistency
 from core.search import search_web
 import config
+
+# Dedicated client so the tie-breaker draws from its own quota (GROQ_TIEBREAKER_API_KEY)
+# instead of competing with the main judge panel's Groq calls.
+tie_breaker_client = Groq(api_key=config.GROQ_TIEBREAKER_API_KEY)
 
 RATE_LIMIT_MARKERS = ("429", "rate limit", "usage limit", "quota")
 
@@ -114,7 +119,8 @@ def calculate_answer_score(judge_results: list[dict], consistency_fraction: floa
 
 
 def tie_breaker_check(question: str, winning_answer: str) -> dict:
-    """Ask GPT-OSS-20B (via Groq) for a single correct/hallucinated verdict on only the winning answer."""
+    """Ask Llama 3.3 70B (via Groq, its own dedicated key) for a single correct/hallucinated
+    verdict on only the winning answer."""
     global tie_breaker_call_count
     prompt = (
         f"Question: {question}\n\n"
@@ -124,12 +130,15 @@ def tie_breaker_check(question: str, winning_answer: str) -> dict:
     )
     tie_breaker_call_count += 1
     try:
-        response_text = call_model(
-            provider=config.TIE_BREAKER_MODEL["provider"],
+        response = tie_breaker_client.chat.completions.create(
             model=config.TIE_BREAKER_MODEL["model"],
-            question=prompt,
+            messages=[
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": prompt},
+            ],
             temperature=0,
         )
+        response_text = response.choices[0].message.content
         return {"correct": "CORRECT" in response_text.upper(), "failed": False}
     except Exception as e:
         return {"correct": None, "failed": True, "error": str(e)}
