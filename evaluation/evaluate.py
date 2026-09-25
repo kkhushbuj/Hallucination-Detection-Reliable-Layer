@@ -250,7 +250,7 @@ def run_evaluation(dataset, global_offset=0, total_overall=200):
         time.sleep(1)
 
     if config.USE_TIE_BREAKER:
-        print(f"\nTie-breaker (Llama 3.3 70B) calls used this run: {get_tie_breaker_call_count()}")
+        print(f"\nTie-breaker (GPT-OSS-120B) calls used this run: {get_tie_breaker_call_count()}")
 
     return results
 
@@ -386,7 +386,7 @@ def run_backfill():
 
     print(f"\nBackfill complete: {total_fixed} fixed, {total_still_failing} still failing.")
     if config.USE_TIE_BREAKER:
-        print(f"Tie-breaker (Llama 3.3 70B) calls used this backfill: {get_tie_breaker_call_count()}")
+        print(f"Tie-breaker (GPT-OSS-120B) calls used this backfill: {get_tie_breaker_call_count()}")
     if total_still_failing == 0:
         print("Running merge for the complete 200-question result...\n")
         merge_batches()
