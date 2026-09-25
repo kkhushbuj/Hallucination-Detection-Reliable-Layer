@@ -11,6 +11,17 @@ def _is_rate_limit_error(error: Exception) -> bool:
     text = str(error).lower()
     return any(marker in text for marker in RATE_LIMIT_MARKERS)
 
+
+# Tracks how many of the 3 per-question judge calls have actually gone to Mistral, since
+# its free tier caps out well before 3 calls/question. Reset per question in run_verification_check.
+mistral_calls_this_question = 0
+
+
+def reset_mistral_call_count():
+    global mistral_calls_this_question
+    mistral_calls_this_question = 0
+
+
 # Tracks how many tie-breaker calls have been made, since they share Groq's daily quota
 # with the rest of the judge panel. Reset per evaluation run so usage stays visible.
 tie_breaker_call_count = 0
@@ -83,9 +94,15 @@ def judge_one_answer(question: str, answer: str) -> list[dict]:
             search_context = None
             search_used = False
 
+    global mistral_calls_this_question
+
     results = []
     for judge in config.VOTING_MODELS:
+        if judge["provider"] == "mistral" and mistral_calls_this_question >= config.MISTRAL_MAX_CALLS_PER_QUESTION:
+            continue  # skip rather than trip Mistral's tight free-tier rate limit
         try:
+            if judge["provider"] == "mistral":
+                mistral_calls_this_question += 1
             correct = verify_answer(question, answer, judge["provider"], judge["model"], search_context=search_context)
             results.append({"provider": judge["provider"], "correct": correct, "failed": False, "search_used": search_used})
         except Exception as e:
@@ -137,6 +154,7 @@ def tie_breaker_check(question: str, winning_answer: str) -> dict:
 
 def run_verification_check(question: str) -> dict:
     """Full pipeline: generate temp-answers, judge each, score with equal weighting, pick winner."""
+    reset_mistral_call_count()
     answers, failed_generations = generate_temperature_answers(question)
 
     if len(answers) == 0:

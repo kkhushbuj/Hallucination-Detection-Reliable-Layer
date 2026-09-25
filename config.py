@@ -22,6 +22,11 @@ VOTING_MODELS = [
     {"provider": "mistral", "model": "mistral-small-latest"},
 ]
 
+# Mistral's free tier has a tight rate limit that 3 calls per question (one per
+# generated answer) trips reliably. Cap how many of those 3 calls actually go to
+# Mistral per question; the rest simply skip it rather than show a rate-limit warning.
+MISTRAL_MAX_CALLS_PER_QUESTION = 1
+
 CONSISTENCY_MODEL = {"provider": "openai", "model": "gpt-4o-mini"}
 CONSISTENCY_RUNS = 4
 CONSISTENCY_TEMPERATURE = 0.9
