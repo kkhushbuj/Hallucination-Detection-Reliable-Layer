@@ -1,10 +1,20 @@
-import anthropic
 from models.llm_providers import call_model
 from core.nli import cluster_answers, calculate_consistency_score, get_per_answer_consistency
 from core.search import search_web
 import config
 
-anthropic_client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+# Tracks how many tie-breaker calls have been made, since they share Groq's daily quota
+# with the rest of the judge panel. Reset per evaluation run so usage stays visible.
+tie_breaker_call_count = 0
+
+
+def reset_tie_breaker_call_count():
+    global tie_breaker_call_count
+    tie_breaker_call_count = 0
+
+
+def get_tie_breaker_call_count() -> int:
+    return tie_breaker_call_count
 
 
 def generate_temperature_answers(question: str):
@@ -86,20 +96,22 @@ def calculate_answer_score(judge_results: list[dict], consistency_fraction: floa
 
 
 def tie_breaker_check(question: str, winning_answer: str) -> dict:
-    """Ask Claude Haiku for a single correct/hallucinated verdict on only the winning answer."""
+    """Ask GPT-OSS-20B (via Groq) for a single correct/hallucinated verdict on only the winning answer."""
+    global tie_breaker_call_count
     prompt = (
         f"Question: {question}\n\n"
         f"Proposed answer: {winning_answer}\n\n"
         "Based on your own knowledge, is this answer factually correct and not "
         "hallucinated? Respond with exactly one word: CORRECT or HALLUCINATED."
     )
+    tie_breaker_call_count += 1
     try:
-        response = anthropic_client.messages.create(
-            model=config.TIE_BREAKER_MODEL,
-            max_tokens=10,
-            messages=[{"role": "user", "content": prompt}],
+        response_text = call_model(
+            provider=config.TIE_BREAKER_MODEL["provider"],
+            model=config.TIE_BREAKER_MODEL["model"],
+            question=prompt,
+            temperature=0,
         )
-        response_text = response.content[0].text
         return {"correct": "CORRECT" in response_text.upper(), "failed": False}
     except Exception as e:
         return {"correct": None, "failed": True, "error": str(e)}

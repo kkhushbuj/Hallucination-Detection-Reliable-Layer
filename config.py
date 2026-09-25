@@ -8,12 +8,12 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
-TIE_BREAKER_MODEL = "claude-haiku-4-5-20251001"
+# Runs via Groq, sharing the same GROQ_API_KEY/quota as VOTING_MODELS - no separate key needed.
+TIE_BREAKER_MODEL = {"provider": "groq", "model": "openai/gpt-oss-20b"}
 TIE_BREAKER_PENALTY = 10
 
 VOTING_MODELS = [

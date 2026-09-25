@@ -4,6 +4,5 @@ openai<3
 groq
 mistralai
 google-genai
-anthropic
 python-dotenv
 requests

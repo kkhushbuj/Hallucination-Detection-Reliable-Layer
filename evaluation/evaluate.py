@@ -14,6 +14,7 @@ load_dotenv()
 
 from graph import build_graph
 from models.llm_providers import call_model
+from core.verification import reset_tie_breaker_call_count, get_tie_breaker_call_count
 import config
 
 BATCH_SIZE = 50
@@ -192,6 +193,7 @@ def run_evaluation(dataset, global_offset=0, total_overall=200):
 
     print(f"Running {len(dataset)} questions (overall #{global_offset + 1}-{global_offset + len(dataset)} of {total_overall}).\n")
 
+    reset_tie_breaker_call_count()
     results = []
 
     for i, row in enumerate(dataset, 1):
@@ -246,6 +248,9 @@ def run_evaluation(dataset, global_offset=0, total_overall=200):
             })
 
         time.sleep(1)
+
+    if config.USE_TIE_BREAKER:
+        print(f"\nTie-breaker (GPT-OSS-20B, shares Groq quota) calls used this run: {get_tie_breaker_call_count()}")
 
     return results
 
@@ -347,6 +352,7 @@ def evaluate_one(trust_graph, question, best_answer, source):
 def run_backfill():
     """Re-run only the failed (empty trust_score) rows across all batch CSVs, updating them in place."""
     trust_graph = build_graph()
+    reset_tie_breaker_call_count()
     total_fixed = 0
     total_still_failing = 0
 
@@ -379,6 +385,8 @@ def run_backfill():
         print(f"Batch {b}: saved.")
 
     print(f"\nBackfill complete: {total_fixed} fixed, {total_still_failing} still failing.")
+    if config.USE_TIE_BREAKER:
+        print(f"Tie-breaker (GPT-OSS-20B, shares Groq quota) calls used this backfill: {get_tie_breaker_call_count()}")
     if total_still_failing == 0:
         print("Running merge for the complete 200-question result...\n")
         merge_batches()
