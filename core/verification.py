@@ -1,7 +1,15 @@
+import time
 from models.llm_providers import call_model
 from core.nli import cluster_answers, calculate_consistency_score, get_per_answer_consistency
 from core.search import search_web
 import config
+
+RATE_LIMIT_MARKERS = ("429", "rate limit", "usage limit", "quota")
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return any(marker in text for marker in RATE_LIMIT_MARKERS)
 
 # Tracks how many tie-breaker calls have been made, since they share Groq's daily quota
 # with the rest of the judge panel. Reset per evaluation run so usage stays visible.
@@ -35,8 +43,8 @@ def generate_temperature_answers(question: str):
     return answers, failed
 
 
-def verify_answer(question: str, answer: str, provider: str, model: str, search_context: str | None = None) -> bool:
-    """Ask one model to judge whether an answer is correct or hallucinated."""
+def verify_answer(question: str, answer: str, provider: str, model: str, search_context: str | None = None, max_retries: int = 2) -> bool:
+    """Ask one model to judge whether an answer is correct or hallucinated. Retries once on a rate-limit error."""
     prompt = (
         f"Question: {question}\n\n"
         f"Proposed answer: {answer}\n\n"
@@ -49,8 +57,18 @@ def verify_answer(question: str, answer: str, provider: str, model: str, search_
         + ", is this answer factually correct and not "
         "hallucinated? Respond with exactly one word: CORRECT or HALLUCINATED."
     )
-    response_text = call_model(provider=provider, model=model, question=prompt, temperature=0)
-    return "CORRECT" in response_text.upper()
+
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            response_text = call_model(provider=provider, model=model, question=prompt, temperature=0)
+            return "CORRECT" in response_text.upper()
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries and _is_rate_limit_error(e):
+                time.sleep(2 * attempt)  # 2s, 4s, ... - only worth retrying a rate limit, not a hard failure
+                continue
+            raise last_error
 
 
 def judge_one_answer(question: str, answer: str) -> list[dict]:
