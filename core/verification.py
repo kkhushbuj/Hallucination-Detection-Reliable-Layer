@@ -1,6 +1,10 @@
+import anthropic
 from models.llm_providers import call_model
 from core.nli import cluster_answers, calculate_consistency_score, get_per_answer_consistency
+from core.search import search_web
 import config
+
+anthropic_client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
 
 
 def generate_temperature_answers(question: str):
@@ -21,12 +25,18 @@ def generate_temperature_answers(question: str):
     return answers, failed
 
 
-def verify_answer(question: str, answer: str, provider: str, model: str) -> bool:
+def verify_answer(question: str, answer: str, provider: str, model: str, search_context: str | None = None) -> bool:
     """Ask one model to judge whether an answer is correct or hallucinated."""
     prompt = (
         f"Question: {question}\n\n"
         f"Proposed answer: {answer}\n\n"
-        "Based on your own knowledge, is this answer factually correct and not "
+    )
+    if search_context:
+        prompt += f"Web search context:\n{search_context}\n\n"
+    prompt += (
+        "Based on your own knowledge"
+        + (" and the web search context above" if search_context else "")
+        + ", is this answer factually correct and not "
         "hallucinated? Respond with exactly one word: CORRECT or HALLUCINATED."
     )
     response_text = call_model(provider=provider, model=model, question=prompt, temperature=0)
@@ -34,14 +44,24 @@ def verify_answer(question: str, answer: str, provider: str, model: str) -> bool
 
 
 def judge_one_answer(question: str, answer: str) -> list[dict]:
-    """Ask all 3 judge models to verify one specific answer."""
+    """Ask all 3 judge models to verify one specific answer, grounded with a web search when enabled."""
+    search_context = None
+    search_used = False
+    if config.USE_WEB_SEARCH:
+        try:
+            search_context = search_web(f"{question} {answer}")
+            search_used = True
+        except Exception:
+            search_context = None
+            search_used = False
+
     results = []
     for judge in config.VOTING_MODELS:
         try:
-            correct = verify_answer(question, answer, judge["provider"], judge["model"])
-            results.append({"provider": judge["provider"], "correct": correct, "failed": False})
+            correct = verify_answer(question, answer, judge["provider"], judge["model"], search_context=search_context)
+            results.append({"provider": judge["provider"], "correct": correct, "failed": False, "search_used": search_used})
         except Exception as e:
-            results.append({"provider": judge["provider"], "correct": None, "failed": True, "error": str(e)})
+            results.append({"provider": judge["provider"], "correct": None, "failed": True, "error": str(e), "search_used": search_used})
     return results
 
 
@@ -63,6 +83,26 @@ def calculate_answer_score(judge_results: list[dict], consistency_fraction: floa
     score += consistency_fraction * weight_per_item
 
     return {"score": score, "any_hallucinated": any_hallucinated}
+
+
+def tie_breaker_check(question: str, winning_answer: str) -> dict:
+    """Ask Claude Haiku for a single correct/hallucinated verdict on only the winning answer."""
+    prompt = (
+        f"Question: {question}\n\n"
+        f"Proposed answer: {winning_answer}\n\n"
+        "Based on your own knowledge, is this answer factually correct and not "
+        "hallucinated? Respond with exactly one word: CORRECT or HALLUCINATED."
+    )
+    try:
+        response = anthropic_client.messages.create(
+            model=config.TIE_BREAKER_MODEL,
+            max_tokens=10,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        response_text = response.content[0].text
+        return {"correct": "CORRECT" in response_text.upper(), "failed": False}
+    except Exception as e:
+        return {"correct": None, "failed": True, "error": str(e)}
 
 
 def run_verification_check(question: str) -> dict:
@@ -102,6 +142,16 @@ def run_verification_check(question: str) -> dict:
     winner = per_answer[winner_index]
     final_score = winner["score"]
 
+    correct_judges = sum(1 for j in winner["judges"] if j["correct"])
+    total_judges = sum(1 for j in winner["judges"] if not j["failed"])
+    panel_majority_correct = correct_judges > total_judges / 2 if total_judges > 0 else True
+
+    tie_breaker = None
+    if config.USE_TIE_BREAKER:
+        tie_breaker = tie_breaker_check(question, winner["answer"])
+        if not tie_breaker["failed"] and tie_breaker["correct"] != panel_majority_correct:
+            final_score = max(0.0, final_score - config.TIE_BREAKER_PENALTY / 100)
+
     if final_score >= config.HIGH_CONFIDENCE_THRESHOLD:
         label = "High confidence — likely reliable"
     elif final_score >= config.MEDIUM_CONFIDENCE_THRESHOLD:
@@ -109,8 +159,6 @@ def run_verification_check(question: str) -> dict:
     else:
         label = "Low confidence — likely unreliable, treat with caution"
 
-    correct_judges = sum(1 for j in winner["judges"] if j["correct"])
-    total_judges = sum(1 for j in winner["judges"] if not j["failed"])
     reasoning = (
         f"{correct_judges}/{total_judges} independent models confirmed this answer as correct. "
         f"It agreed with {round(winner['consistency_fraction'] * 100)}% of the other generated answers."
@@ -119,6 +167,15 @@ def run_verification_check(question: str) -> dict:
         reasoning += " Note: at least one model flagged possible hallucination for this answer."
     if failed_generations:
         reasoning += f" Note: {len(failed_generations)} of {len(config.TEMPERATURES)} answer attempts failed to generate."
+
+    tie_breaker_disagreed = bool(
+        tie_breaker and not tie_breaker["failed"] and tie_breaker["correct"] != panel_majority_correct
+    )
+    if tie_breaker_disagreed:
+        reasoning += (
+            " Note: an independent high-capability check disagreed with this result — "
+            "treat with extra caution."
+        )
 
     return {
         "answers": answers,
@@ -130,4 +187,6 @@ def run_verification_check(question: str) -> dict:
         "label": label,
         "reasoning": reasoning,
         "failed_generations": failed_generations,
+        "tie_breaker": tie_breaker,
+        "tie_breaker_disagreed": tie_breaker_disagreed,
     }

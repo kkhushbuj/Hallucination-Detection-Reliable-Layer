@@ -135,6 +135,16 @@ if st.button("Get Answer & Check Trust", type="primary"):
         st.progress(min(int(score), 100))
         st.caption(verification["reasoning"].replace("$", "\\$"))
 
+        tie_breaker = verification.get("tie_breaker")
+        if tie_breaker:
+            if tie_breaker["failed"]:
+                st.caption(f"⚠️ Tie-breaker check (Claude Haiku) unavailable: {friendly_error(tie_breaker.get('error', ''))}")
+            else:
+                verdict = "CORRECT" if tie_breaker["correct"] else "HALLUCINATED"
+                st.caption(f"Tie-breaker check (Claude Haiku): {verdict}")
+                if verification.get("tie_breaker_disagreed"):
+                    st.warning("⚠️ Note: an independent high-capability check disagreed with this result — treat with extra caution.")
+
         st.markdown("### Judge Breakdown")
 
         per_answer = verification["per_answer"]

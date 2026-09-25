@@ -6,7 +6,6 @@ import time
 import random
 import argparse
 import requests
-from groq import Groq
 from dotenv import load_dotenv
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,12 +13,24 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
 
 from graph import build_graph
-
-judge_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+from models.llm_providers import call_model
+import config
 
 BATCH_SIZE = 50
 NUM_BATCHES = 4
 FIELDNAMES = ["question", "source", "model_answer", "best_answer", "trust_score", "label", "flagged_count", "majority_flagged", "correct"]
+
+# Models used to independently check correctness against the benchmark answer. A majority
+# vote (2-of-3) is taken as the final label, and 2-1 splits are tracked as a disagreement.
+GROUND_TRUTH_CHECKERS = [
+    {"provider": "groq", "model": "qwen/qwen3.8-27b"},
+    {"provider": "gemini", "model": "gemini-3.5-flash"},
+    {"provider": "mistral", "model": "mistral-small-latest"},
+]
+
+# Running counts of how often the 3 correctness-checkers disagreed (2-1 split), reset per run.
+checker_disagreement_count = 0
+checker_total_count = 0
 
 
 def load_truthfulqa(path="evaluation/datasets/truthfulqa_full.csv", n=67, seed=42):
@@ -123,7 +134,8 @@ def get_batch(batch_num: int, batch_size: int = BATCH_SIZE):
     return dataset[start:end], start
 
 
-def is_correct(question: str, model_answer: str, best_answer: str, max_retries: int = 3) -> bool:
+def _check_correctness_once(question: str, model_answer: str, best_answer: str, provider: str, model: str, max_retries: int = 3) -> bool:
+    """Ask one checker model for a YES/NO correctness verdict, with retry/backoff."""
     prompt = (
         f"Question: {question}\n\n"
         f"Expected correct answer: {best_answer}\n\n"
@@ -138,22 +150,41 @@ def is_correct(question: str, model_answer: str, best_answer: str, max_retries: 
     last_error = None
     for attempt in range(1, max_retries + 1):
         try:
-            response = judge_client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
-                max_tokens=300,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                reasoning_effort="low",
-            )
-            answer = response.choices[0].message.content.strip().upper()
-            return answer.startswith("YES")
+            response_text = call_model(provider=provider, model=model, question=prompt, temperature=0)
+            return response_text.strip().upper().startswith("YES")
         except Exception as e:
             last_error = e
             wait = 2 ** attempt  # 2s, 4s, 8s
-            print(f"    is_correct attempt {attempt}/{max_retries} failed ({e}); retrying in {wait}s...")
+            print(f"    {provider} correctness-check attempt {attempt}/{max_retries} failed ({e}); retrying in {wait}s...")
             time.sleep(wait)
 
-    raise RuntimeError(f"is_correct failed after {max_retries} attempts") from last_error
+    raise RuntimeError(f"{provider} correctness-check failed after {max_retries} attempts") from last_error
+
+
+def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
+    """Majority vote (2-of-3) across independent checker models. Tracks 2-1 disagreement splits."""
+    global checker_disagreement_count, checker_total_count
+
+    votes = []
+    for checker in GROUND_TRUTH_CHECKERS:
+        try:
+            votes.append(_check_correctness_once(question, model_answer, best_answer, checker["provider"], checker["model"]))
+        except Exception as e:
+            print(f"    Checker {checker['provider']} gave up: {e}")
+
+    if not votes:
+        raise RuntimeError("All correctness-checker models failed")
+
+    yes_votes = sum(votes)
+    no_votes = len(votes) - yes_votes
+    majority_correct = yes_votes > no_votes
+
+    checker_total_count += 1
+    if len(votes) == 3 and yes_votes in (1, 2):
+        checker_disagreement_count += 1
+        print(f"    Checkers split {yes_votes}-{no_votes} on this question.")
+
+    return majority_correct
 
 
 def run_evaluation(dataset, global_offset=0, total_overall=200):
@@ -270,6 +301,13 @@ def summarize(results, out_path="evaluation/results_final.csv", title="EVALUATIO
             source_correct = [r for r in source_results if r["correct"]]
             acc = len(source_correct) / len(source_results) * 100
             print(f"  {source}: {acc:.1f}% accuracy ({len(source_correct)}/{len(source_results)})")
+
+    if checker_total_count > 0:
+        disagreement_rate = checker_disagreement_count / checker_total_count * 100
+        print(
+            f"\nGround-truth checker disagreement (2-1 splits): "
+            f"{checker_disagreement_count}/{checker_total_count} ({disagreement_rate:.1f}%)"
+        )
 
     save_csv(results, out_path)
     print(f"\nDetailed results saved to {out_path}")

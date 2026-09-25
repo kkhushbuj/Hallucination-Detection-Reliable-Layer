@@ -7,6 +7,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+USE_WEB_SEARCH = True
+USE_TIE_BREAKER = True
+
+TIE_BREAKER_MODEL = "claude-haiku-4-5-20251001"
+TIE_BREAKER_PENALTY = 10
 
 VOTING_MODELS = [
     {"provider": "groq", "model": "qwen/qwen3.8-27b"},
