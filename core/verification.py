@@ -114,7 +114,8 @@ def calculate_answer_score(judge_results: list[dict], consistency_fraction: floa
 
 
 def tie_breaker_check(question: str, winning_answer: str) -> dict:
-    """Ask GPT-OSS-20B (via Groq) for a single correct/hallucinated verdict on only the winning answer."""
+    """Ask Llama 3.3 70B (via OpenRouter) for a single correct/hallucinated verdict
+    on only the winning answer."""
     global tie_breaker_call_count
     prompt = (
         f"Question: {question}\n\n"
