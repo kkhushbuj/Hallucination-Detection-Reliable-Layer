@@ -5,6 +5,7 @@ import openai
 from groq import Groq
 from mistralai.client import Mistral
 from google import genai
+import cohere
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+cohere_client = cohere.ClientV2(api_key=os.getenv("COHERE_API_KEY"))
 
 SYSTEM_INSTRUCTION = (
     "If the user asks about something that does not exist (a fake study, "
@@ -70,6 +72,19 @@ def call_model(provider: str, model: str, question: str, temperature: float = 0.
             contents=full_prompt,
         )
         return _strip_thinking(response.text)
+
+    elif provider == "cohere":
+        response = cohere_client.chat(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": question},
+            ],
+            temperature=temperature,
+        )
+        content = response.message.content
+        text = content if isinstance(content, str) else content[0].text
+        return _strip_thinking(text)
 
     else:
         raise ValueError(f"Unknown provider: {provider}")

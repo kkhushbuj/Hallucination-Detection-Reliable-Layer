@@ -8,6 +8,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
@@ -19,7 +20,7 @@ TIE_BREAKER_PENALTY = 10
 VOTING_MODELS = [
     {"provider": "groq", "model": "qwen/qwen3.8-27b"},
     {"provider": "gemini", "model": "gemini-3.5-flash"},
-    {"provider": "mistral", "model": "mistral-small-latest"},
+    {"provider": "cohere", "model": "command-r-08-2024"},
 ]
 
 CONSISTENCY_MODEL = {"provider": "openai", "model": "gpt-4o-mini"}
