@@ -145,43 +145,46 @@ if st.button("Get Answer & Check Trust", type="primary"):
                 if verification.get("tie_breaker_disagreed"):
                     st.warning("⚠️ Note: an independent high-capability check disagreed with this result — treat with extra caution.")
 
-        st.markdown("### Judge Breakdown")
-
         per_answer = verification["per_answer"]
-        tabs = st.tabs([f"Answer {i}" for i in range(1, len(per_answer) + 1)])
 
-        for tab, a in zip(tabs, per_answer):
-            with tab:
-                st.markdown(
-                    f"<div class='answer-text'>{safe_html(a['answer'])}</div>",
-                    unsafe_allow_html=True,
-                )
-                st.write("")
+        if not per_answer:
+            pass  # nothing to break down when every answer-generation attempt failed
+        else:
+            st.markdown("### Judge Breakdown")
+            tabs = st.tabs([f"Answer {i}" for i in range(1, len(per_answer) + 1)])
 
-                chips = ""
-                for j in a["judges"]:
-                    if j["failed"]:
-                        reason = friendly_error(j.get("error", ""))
-                        chips += f"<span class='judge-chip judge-warn'>⚠️ {j['provider']}: {reason}</span>"
-                    elif j["correct"]:
-                        chips += f"<span class='judge-chip judge-agree'>✅ {j['provider']}</span>"
+            for tab, a in zip(tabs, per_answer):
+                with tab:
+                    st.markdown(
+                        f"<div class='answer-text'>{safe_html(a['answer'])}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.write("")
+
+                    chips = ""
+                    for j in a["judges"]:
+                        if j["failed"]:
+                            reason = friendly_error(j.get("error", ""))
+                            chips += f"<span class='judge-chip judge-warn'>⚠️ {j['provider']}: {reason}</span>"
+                        elif j["correct"]:
+                            chips += f"<span class='judge-chip judge-agree'>✅ {j['provider']}</span>"
+                        else:
+                            chips += f"<span class='judge-chip judge-disagree'>❌ {j['provider']}</span>"
+                    st.markdown(chips, unsafe_allow_html=True)
+
+                    correct_count = sum(1 for j in a["judges"] if j["correct"])
+                    total_responding = sum(1 for j in a["judges"] if not j["failed"])
+
+                    if total_responding == 0:
+                        st.warning("⚠️ No judges responded")
+                    elif correct_count > total_responding / 2:
+                        st.success(f"🟢 Stable — {correct_count}/{total_responding} judges agree")
                     else:
-                        chips += f"<span class='judge-chip judge-disagree'>❌ {j['provider']}</span>"
-                st.markdown(chips, unsafe_allow_html=True)
+                        st.error(f"🔴 Not Stable — only {correct_count}/{total_responding} judges agree")
 
-                correct_count = sum(1 for j in a["judges"] if j["correct"])
-                total_responding = sum(1 for j in a["judges"] if not j["failed"])
-
-                if total_responding == 0:
-                    st.warning("⚠️ No judges responded")
-                elif correct_count > total_responding / 2:
-                    st.success(f"🟢 Stable — {correct_count}/{total_responding} judges agree")
-                else:
-                    st.error(f"🔴 Not Stable — only {correct_count}/{total_responding} judges agree")
-
-                st.caption(
-                    f"Score: {round(a['score']*100, 1)}% | Agreed with {round(a['consistency_fraction']*100)}% of other answers"
-                )
+                    st.caption(
+                        f"Score: {round(a['score']*100, 1)}% | Agreed with {round(a['consistency_fraction']*100)}% of other answers"
+                    )
 
         if verification.get("failed_generations"):
             with st.expander("Some answer attempts failed"):
