@@ -11,44 +11,153 @@ st.markdown(
 
     html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
 
+    .stApp {
+        background: #0d0a14;
+        color: #f3f1f8;
+    }
+
     .block-container { padding-top: 2.5rem; padding-bottom: 3rem; max-width: 760px; }
 
-    .hero { text-align: center; margin-bottom: 2rem; }
-    .hero-icon { font-size: 2.75rem; line-height: 1; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
+
+    /* ---------- Hero ---------- */
+    .hero { text-align: center; margin-bottom: 3rem; }
+    .hero-icon-box {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 76px; height: 76px; border-radius: 22px; margin-bottom: 1.1rem;
+        background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        box-shadow: 0 0 50px rgba(168, 85, 247, 0.55), 0 0 0 1px rgba(255,255,255,0.05) inset;
+    }
+    .hero-icon { font-size: 2.1rem; line-height: 1; }
     .hero-title {
-        font-size: 2.1rem; font-weight: 800; margin: 0.4rem 0 0.25rem 0;
-        background: linear-gradient(90deg, #6366f1, #ec4899);
+        font-size: 2.3rem; font-weight: 800; margin: 0.2rem 0 0.6rem 0;
+        background: linear-gradient(90deg, #8b5cf6, #a855f7, #ec4899);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
-    .hero-sub { color: #6b7280; font-size: 1rem; }
+    .hero-sub {
+        color: #a1a1b5; font-size: 1.03rem; max-width: 520px;
+        margin: 0 auto; line-height: 1.6;
+    }
 
+    /* ---------- Cards ---------- */
     .card {
-        background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px;
-        padding: 1.5rem 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1.25rem;
+        background: #161220;
+        border: 1px solid rgba(168, 85, 247, 0.25);
+        border-radius: 16px;
+        padding: 1.5rem 1.75rem;
+        box-shadow: 0 0 24px rgba(139, 92, 246, 0.08);
+        margin-bottom: 1.25rem;
     }
-    .card-label { font-weight: 700; font-size: 1.05rem; color: #374151; margin-bottom: 0.6rem; }
-    .answer-text { font-size: 1.05rem; line-height: 1.6; color: #111827; white-space: pre-wrap; }
+    .card-label { font-weight: 700; font-size: 1.05rem; color: #e5e1f0; margin-bottom: 0.6rem; }
+    .answer-text { font-size: 1.05rem; line-height: 1.6; color: #f3f1f8; white-space: pre-wrap; }
 
+    /* ---------- How It Works ---------- */
+    .info-card {
+        background: #161220;
+        border: 1px solid rgba(168, 85, 247, 0.22);
+        border-radius: 14px;
+        padding: 1.1rem 1rem;
+        height: 100%;
+        box-shadow: 0 0 18px rgba(139, 92, 246, 0.06);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0 32px rgba(168, 85, 247, 0.28);
+        border-color: rgba(168, 85, 247, 0.5);
+    }
+    .info-card-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+    .info-card-title { font-weight: 700; font-size: 0.95rem; color: #f3f1f8; margin-bottom: 0.35rem; }
+    .info-card-desc { font-size: 0.82rem; color: #a1a1b5; line-height: 1.45; }
+
+    .section-heading {
+        color: #f3f1f8; font-weight: 700; font-size: 1.3rem;
+        margin: 1.75rem 0 1rem 0;
+    }
+
+    /* ---------- Score ---------- */
     .score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-    .score-number { font-size: 2.5rem; font-weight: 800; color: #111827; }
+    .score-number {
+        font-size: 2.6rem; font-weight: 800; color: #ffffff;
+        text-shadow: 0 0 24px rgba(168, 85, 247, 0.65);
+    }
 
     .badge {
         display: inline-block; padding: 0.3rem 0.85rem; border-radius: 999px;
         font-weight: 600; font-size: 0.85rem; white-space: nowrap;
     }
-    .badge-high { background: #dcfce7; color: #15803d; }
-    .badge-medium { background: #fef3c7; color: #b45309; }
-    .badge-low { background: #fee2e2; color: #b91c1c; }
+    .badge-high { background: #052e1a; color: #4ade80; }
+    .badge-medium { background: #3f2a05; color: #fbbf24; }
+    .badge-low { background: #3f0a0a; color: #f87171; }
 
     .judge-chip {
         display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.7rem;
         border-radius: 8px; font-size: 0.85rem; font-weight: 500; margin: 0.2rem 0.3rem 0.2rem 0;
     }
-    .judge-agree { background: #ecfdf5; color: #047857; }
-    .judge-disagree { background: #fef2f2; color: #b91c1c; }
-    .judge-warn { background: #f9fafb; color: #6b7280; }
+    .judge-agree { background: #052e1a; color: #4ade80; }
+    .judge-disagree { background: #3f0a0a; color: #f87171; }
+    .judge-warn { background: #211d2e; color: #9b96ab; }
 
-    .stButton>button { border-radius: 10px; padding: 0.6rem 0; font-weight: 600; font-size: 1rem; width: 100%; }
+    /* ---------- Button ---------- */
+    .stButton>button {
+        border-radius: 10px; padding: 0.65rem 0; font-weight: 700; font-size: 1rem; width: 100%;
+        background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        color: #ffffff; border: none;
+        box-shadow: 0 0 24px rgba(168, 85, 247, 0.45);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 38px rgba(168, 85, 247, 0.7);
+        color: #ffffff;
+    }
+    .stButton>button:active { transform: translateY(0); }
+
+    /* ---------- Text area ---------- */
+    .stTextArea textarea {
+        background: #161220 !important;
+        color: #f3f1f8 !important;
+        border: 1px solid rgba(168, 85, 247, 0.3) !important;
+        border-radius: 10px !important;
+    }
+    .stTextArea textarea:focus {
+        border-color: #a855f7 !important;
+        box-shadow: 0 0 0 1px #a855f7, 0 0 20px rgba(168, 85, 247, 0.4) !important;
+    }
+    .stTextArea textarea::placeholder { color: #6b6680 !important; }
+
+    /* ---------- Progress bar ---------- */
+    .stProgress > div > div > div > div {
+        background: linear-gradient(90deg, #8b5cf6, #ec4899) !important;
+    }
+    .stProgress > div > div > div { background: #211d2e !important; }
+
+    /* ---------- Tabs ---------- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.4rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: #161220;
+        border-radius: 10px;
+        color: #a1a1b5;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgba(168, 85, 247, 0.15);
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+
+    /* ---------- Footer ---------- */
+    .app-footer {
+        text-align: center; color: #6b6680; font-size: 0.82rem;
+        margin-top: 3rem; padding-top: 1.25rem;
+        border-top: 1px solid rgba(168, 85, 247, 0.12);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -57,9 +166,9 @@ st.markdown(
 st.markdown(
     """
     <div class="hero">
-      <div class="hero-icon">🔍</div>
+      <div class="hero-icon-box"><div class="hero-icon">🔍</div></div>
       <div class="hero-title">LLM Trust Score</div>
-      <div class="hero-sub">Get an AI answer, then see exactly how much you can trust it.</div>
+      <div class="hero-sub">Get an AI answer, then see exactly how much you can trust it — verified by multiple independent models before you ever see the result.</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -72,6 +181,43 @@ question = st.text_area(
     placeholder="e.g. What is the capital of Australia?",
     label_visibility="collapsed",
 )
+
+how_it_works_col1, how_it_works_col2, how_it_works_col3 = st.columns(3)
+with how_it_works_col1:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-card-icon">🎲</div>
+            <div class="info-card-title">Generate</div>
+            <div class="info-card-desc">The model answers the same question multiple times at different temperatures.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+with how_it_works_col2:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-card-icon">⚖️</div>
+            <div class="info-card-title">Judge</div>
+            <div class="info-card-desc">Independent AI judges — separate from the generator — verify each answer on its own.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+with how_it_works_col3:
+    st.markdown(
+        """
+        <div class="info-card">
+            <div class="info-card-icon">📊</div>
+            <div class="info-card-title">Score</div>
+            <div class="info-card-desc">Judge votes and answer consistency combine into one clear Trust Score.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.write("")
 
 
 def friendly_error(error_text: str) -> str:
@@ -150,7 +296,7 @@ if st.button("Get Answer & Check Trust", type="primary"):
         if not per_answer:
             pass  # nothing to break down when every answer-generation attempt failed
         else:
-            st.markdown("### Judge Breakdown")
+            st.markdown('<div class="section-heading">Judge Breakdown</div>', unsafe_allow_html=True)
             tabs = st.tabs([f"Answer {i}" for i in range(1, len(per_answer) + 1)])
 
             for tab, a in zip(tabs, per_answer):
@@ -196,3 +342,8 @@ if st.button("Get Answer & Check Trust", type="primary"):
             with st.expander("Some answer attempts failed"):
                 for f in verification["failed_generations"]:
                     st.caption(f"Temperature {f['temperature']}: {friendly_error(f.get('error', ''))}")
+
+st.markdown(
+    '<div class="app-footer">Built with Multi-Model Verification · Powered by LangGraph</div>',
+    unsafe_allow_html=True,
+)
