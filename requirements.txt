@@ -5,4 +5,8 @@ groq
 mistralai
 google-genai
 python-dotenv
+cohere
+cerebras-cloud-sdk
 requests
+fastapi
+uvicorn
