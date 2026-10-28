@@ -1,4 +1,8 @@
+"""Trust-score pipeline: generate answers, judge them, score them and tie-break the winner."""
+
+import re
 import time
+
 from models.llm_providers import call_model
 from core.nli import cluster_answers, calculate_consistency_score, get_per_answer_consistency
 from core.search import search_web
@@ -11,8 +15,7 @@ def _is_rate_limit_error(error: Exception) -> bool:
     text = str(error).lower()
     return any(marker in text for marker in RATE_LIMIT_MARKERS)
 
-# Tracks how many tie-breaker calls have been made, since they share Groq's daily quota
-# with the rest of the judge panel. Reset per evaluation run so usage stays visible.
+# Counts tie-breaker calls so quota use stays visible. Reset per evaluation run.
 tie_breaker_call_count = 0
 
 
@@ -23,6 +26,21 @@ def reset_tie_breaker_call_count():
 
 def get_tie_breaker_call_count() -> int:
     return tie_breaker_call_count
+
+
+def parse_verdict(reply: str) -> bool:
+    """Read a judge's reply as True (correct) or False (hallucinated).
+
+    Matching the substring "CORRECT" is not safe, because "INCORRECT" and "not correct"
+    both contain it. Negations are checked first, and an unreadable reply raises so the
+    judge is counted as failed instead of silently voting yes.
+    """
+    text = reply.strip().upper()
+    if re.search(r"HALLUCINAT|INCORRECT|NOT\s+CORRECT|NOT\s+ACCURATE|WRONG", text):
+        return False
+    if re.search(r"\bCORRECT\b", text):
+        return True
+    raise ValueError(f"Unreadable verdict: {reply[:80]!r}")
 
 
 def generate_temperature_answers(question: str):
@@ -62,7 +80,7 @@ def verify_answer(question: str, answer: str, provider: str, model: str, search_
     for attempt in range(1, max_retries + 1):
         try:
             response_text = call_model(provider=provider, model=model, question=prompt, temperature=0)
-            return "CORRECT" in response_text.upper()
+            return parse_verdict(response_text)
         except Exception as e:
             last_error = e
             if attempt < max_retries and _is_rate_limit_error(e):
@@ -114,8 +132,7 @@ def calculate_answer_score(judge_results: list[dict], consistency_fraction: floa
 
 
 def tie_breaker_check(question: str, winning_answer: str) -> dict:
-    """Ask Llama 3.3 70B (via OpenRouter) for a single correct/hallucinated verdict
-    on only the winning answer."""
+    """Ask the tie-breaker model for a single correct/hallucinated verdict on only the winning answer."""
     global tie_breaker_call_count
     prompt = (
         f"Question: {question}\n\n"
@@ -131,7 +148,7 @@ def tie_breaker_check(question: str, winning_answer: str) -> dict:
             question=prompt,
             temperature=0,
         )
-        return {"correct": "CORRECT" in response_text.upper(), "failed": False}
+        return {"correct": parse_verdict(response_text), "failed": False}
     except Exception as e:
         return {"correct": None, "failed": True, "error": str(e)}
 
