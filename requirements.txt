@@ -1,4 +1,5 @@
-streamlit
+fastapi
+uvicorn
 langgraph
 openai<3
 groq
