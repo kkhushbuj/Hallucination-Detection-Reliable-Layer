@@ -916,7 +916,7 @@ function showError(msg) {
 
 var loadTimer = null;
 function setLoading(on) {
-    var steps = ['Generating three answers', 'Asking three judges', 'Checking agreement', 'Scoring'], i = 0;
+    var steps = ['Generating three answers', 'Searching the web and asking three judges', 'Checking agreement', 'Running the tie-breaker'], i = 0;
     $('#loading').classList.toggle('on', on);
     $('#goBtn').disabled = on;
     clearInterval(loadTimer);
@@ -974,12 +974,23 @@ function render(data, q, fromHistory) {
         });
         matrix += '</div>';
     }
+    var checks = '';
+    if (per.length) {
+        var agree = +data.overall_consistency || 0, tb = data.tie_breaker;
+        checks = '<div class="jchips" style="margin-top:20px"><span class="jc ' + (agree >= 67 ? 'ok' : 'no') + '">' + esc(judgeName('gemini')) + ' · answers agree ' + Math.round(agree) + '%</span>';
+        if (tb) {
+            if (tb.failed) checks += '<span class="jc er">' + esc(judgeName('nvidia')) + ' · tie-breaker no response</span>';
+            else if (data.tie_breaker_disagreed) checks += '<span class="jc no">' + esc(judgeName('nvidia')) + ' · tie-breaker disagrees with the panel · −10 points</span>';
+            else checks += '<span class="jc ok">' + esc(judgeName('nvidia')) + ' · tie-breaker agrees with the panel</span>';
+        }
+        checks += '</div>';
+    }
     var box = $('#results2');
     box.innerHTML =
         '<div class="r-answer"><small>Verified answer</small><p>' + esc(data.winner_answer) + '</p></div>' +
         '<div class="r-score"><div><small>Trust score</small><div class="r-num ' + t.c + '">' + score + '</div></div>' +
         '<div><div class="verdict">' + t.t + '</div><div class="meter"><i class="' + t.c + '" style="width:' + Math.min(score, 100) + '%"></i></div><p class="why">' + esc(data.reasoning) + '</p></div></div>' +
-        (per.length ? '<h2 class="jh">How each judge voted</h2>' + matrix + '<h3 class="jh" style="font-size:20px;margin-top:36px">Read each answer</h3>' + tabs + panels : '') +
+        (per.length ? '<h2 class="jh">How each judge voted</h2>' + matrix + checks + '<h3 class="jh" style="font-size:20px;margin-top:36px">Read each answer</h3>' + tabs + panels : '') +
         '<div class="submit" style="margin-top:40px"><button class="btn ghost" id="again">Ask another question</button></div>';
     box.classList.add('on');
     $$('.tab', box).forEach(function (b) {
