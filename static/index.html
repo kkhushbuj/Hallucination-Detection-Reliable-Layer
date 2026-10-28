@@ -455,11 +455,11 @@ textarea:focus { outline: none; border-color: var(--green); }
                 </div>
                 <div class="step" data-step="1">
                     <h3>Three judges vote</h3>
-                    <p>Qwen3 27B, Cohere Command A and gpt-oss 120B each decide, without seeing each other, whether every answer is correct or hallucinated.</p>
+                    <p>Qwen3 27B, Mistral Medium 3.5 and Llama 3.3 70B each decide, without seeing each other, whether every answer is correct or hallucinated. Each one reads fresh web search results first.</p>
                 </div>
                 <div class="step" data-step="2">
                     <h3>Count what agrees</h3>
-                    <p>A fourth check asks whether the three answers reach the same conclusion. Each judge and the agreement check count equally, and the best answer is shown with its score.</p>
+                    <p>Gemini 3.5 Flash-Lite checks whether the three answers reach the same conclusion. Each judge and the agreement check count equally. Nemotron then double-checks the best answer and takes 10 points off if it disagrees with the panel.</p>
                 </div>
             </div>
             <div class="how-visual on-ink" aria-hidden="true" id="howVisual">
@@ -472,7 +472,7 @@ textarea:focus { outline: none; border-color: var(--green); }
                 <div class="stage" data-stage="1">
                     <div class="stage-label">Each judge votes on each answer</div>
                     <div class="vtable">
-                        <div class="vh"></div><div class="vh">Qwen3</div><div class="vh">Cohere</div><div class="vh">gpt-oss</div>
+                        <div class="vh"></div><div class="vh">Qwen3</div><div class="vh">Mistral</div><div class="vh">Llama</div>
                         <div>Answer 1</div><div class="yes">Correct</div><div class="yes">Correct</div><div class="yes">Correct</div>
                         <div>Answer 2</div><div class="yes">Correct</div><div class="yes">Correct</div><div class="yes">Correct</div>
                         <div>Answer 3</div><div class="yes">Correct</div><div class="yes">Correct</div><div class="no">Wrong</div>
@@ -482,7 +482,7 @@ textarea:focus { outline: none; border-color: var(--green); }
                     <div class="stage-label">Trust score for Answer 1 (illustrative)</div>
                     <div class="sc-big" id="scBig">100</div>
                     <div class="sc-parts">
-                        <div><b>25</b>Qwen3</div><div><b>25</b>Cohere</div><div><b>25</b>gpt-oss</div><div><b>25</b>Agreement</div>
+                        <div><b>25</b>Qwen3</div><div><b>25</b>Mistral</div><div><b>25</b>Llama</div><div><b>25</b>Agreement</div>
                     </div>
                 </div>
                 <div class="pbar"><i></i></div>
@@ -542,7 +542,7 @@ textarea:focus { outline: none; border-color: var(--green); }
         <h2 class="rv">Questions people ask.</h2>
         <div class="faq-list rv">
             <details class="faq"><summary>Does a high score mean the answer is true?<i aria-hidden="true"></i></summary><p class="ans-t">No. It means the judges and the three answers agree. On TruthfulQA the models often share the same myth, so a wrong answer can still score 100.</p></details>
-            <details class="faq"><summary>Which models are used?<i aria-hidden="true"></i></summary><p class="ans-t">GPT-4o-mini writes the three answers. Qwen3 27B, Cohere Command A and gpt-oss 120B judge each one, and a Qwen model checks whether the answers reach the same conclusion.</p></details>
+            <details class="faq"><summary>Which models are used?<i aria-hidden="true"></i></summary><p class="ans-t">GPT-4o-mini writes the three answers. Qwen3 27B, Mistral Medium 3.5 and Llama 3.3 70B judge each one using Tavily web search results, Gemini 3.5 Flash-Lite checks whether the answers reach the same conclusion, and Nemotron 3.5 Lightning double-checks the winner.</p></details>
             <details class="faq"><summary>What do the confidence labels mean?<i aria-hidden="true"></i></summary><p class="ans-t">A score of 80 or more is high confidence, 75 to 79 is medium, and anything below 75 is low. Treat medium and low scores as a reason to check another source.</p></details>
             <details class="faq"><summary>What if a model fails to respond?<i aria-hidden="true"></i></summary><p class="ans-t">The score is built from the judges that did respond, and failed attempts are listed in the result. If all three answers fail, the score is 0 with an error message.</p></details>
             <details class="faq"><summary>What kind of question works best?<i aria-hidden="true"></i></summary><p class="ans-t">Factual questions with one checkable answer, such as dates, places and names. It is weakest on common misconceptions and opinions.</p></details>
@@ -903,7 +903,7 @@ function randomizeChips() {
     });
 }
 
-var JUDGE_NAMES = { groq: 'Qwen3 27B', cohere: 'Cohere Command A', llama: 'gpt-oss 120B', gemini: 'Gemini', mistral: 'Mistral', openai: 'GPT' };
+var JUDGE_NAMES = { groq: 'Qwen3 27B', openrouter_mistral: 'Mistral Medium 3.5', openrouter_llama: 'Llama 3.3 70B', gemini: 'Gemini 3.5 Flash-Lite', nvidia: 'Nemotron 3.5', openai: 'GPT-4o-mini' };
 function judgeName(p) { return JUDGE_NAMES[p] || p; }
 var history_ = [];
 
