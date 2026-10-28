@@ -5,3 +5,10 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+
+# Local run output and tooling
+*.log
+run2_*
+.claude/
+.agents/
+research_notes/

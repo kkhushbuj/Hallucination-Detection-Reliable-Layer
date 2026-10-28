@@ -3,8 +3,5 @@ uvicorn
 langgraph
 openai<3
 groq
-mistralai
-google-genai
-cohere
 python-dotenv
 requests
