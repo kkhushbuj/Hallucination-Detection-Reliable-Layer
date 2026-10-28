@@ -7,7 +7,7 @@ The score combines two independent signals: whether *other* models agree the ans
 ## How it works
 
 1. **Generate** — `gpt-4o-mini` answers the question 3 times at temperature 0.9 (the self-consistency technique).
-2. **Check agreement** — Gemma 4 compares the 3 answers in pairs and decides whether they reach the same conclusion. Each answer gets a consistency value: the share of the *other* answers that agree with it.
+2. **Check agreement** — Gemini 3.5 Flash-Lite compares the 3 answers in pairs and decides whether they reach the same conclusion. Each answer gets a consistency value: the share of the *other* answers that agree with it.
 3. **Ground with a web search** — for each answer, Tavily searches the question plus that answer, and the top results are added to every judge's prompt.
 4. **Judge** — each answer is judged `CORRECT` or `HALLUCINATED` by three models from three labs: Qwen3.8-27B (Groq), Mistral Medium 3.5 and Llama 3.3 70B (both via OpenRouter).
 5. **Score** — every judge that responds and the consistency value each get an equal share of the score. A failed judge is dropped and the shares rebalance. The best-scoring answer wins.
@@ -27,7 +27,7 @@ The writer, the judges, the agreement checker and the tie-breaker are all differ
 |---|---|
 | Answer writer | OpenAI `gpt-4o-mini` |
 | Judges | Qwen3.8-27B · Mistral Medium 3.5 · Llama 3.3 70B |
-| Agreement checker | Google Gemma 4 31B |
+| Agreement checker | Google Gemini 3.5 Flash-Lite |
 | Tie-breaker | NVIDIA Nemotron 3.5 Lightning 30B |
 | Web search | Tavily |
 | Evaluation grader | Anthropic Claude Haiku 5.5 |
