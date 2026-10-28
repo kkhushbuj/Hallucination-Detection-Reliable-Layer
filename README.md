@@ -81,11 +81,13 @@ Since every judge/checker call is itself a probabilistic LLM call, the same 200-
 
 ## Tech stack
 
-Python, LangGraph (pipeline orchestration), LangSmith (tracing), OpenAI / Groq / Gemini / Mistral APIs, Tavily (web search grounding), Streamlit (UI)
+Python, LangGraph (pipeline orchestration), LangSmith (tracing), OpenAI / Groq / Gemini / Mistral APIs, Tavily (web search grounding), FastAPI (UI)
 
 ## Project structure
 
-├── app.py                          # Streamlit UI
+├── server.py                       # FastAPI server (serves the site, POST /api/verify)
+├── static/
+│   └── index.html                  # The web UI
 ├── graph.py                        # LangGraph pipeline definition
 ├── config.py                       # Models, thresholds, feature flags, settings
 ├── core/
@@ -108,6 +110,6 @@ Python, LangGraph (pipeline orchestration), LangSmith (tracing), OpenAI / Groq /
 2. Add your API keys to `.env`:
    - `OPENAI_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY` — required
    - `TAVILY_API_KEY` — required only if `config.USE_WEB_SEARCH` is `True` (get a free key at [tavily.com](https://tavily.com), 1,000 searches/month free)
-3. Run the app: `streamlit run app.py`
+3. Run the app: `uvicorn server:app --reload --port 8000`, then open http://localhost:8000
 
 Feature flags in `config.py` (`USE_WEB_SEARCH`, `USE_TIE_BREAKER`) can be set to `False` to skip the web-search and tie-breaker steps and save on API calls/quota.
