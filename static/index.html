@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Trust Score</title>
+<meta name="description" content="Three GPT answers, three independent AI judges and an agreement check combine into one trust score for any factual answer.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230e6b4b'/><path d='M8 17l5 5 11-12' fill='none' stroke='white' stroke-width='3.5'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --ground: #ecede8;
+    --ground-2: #e0e2db;
+    --ink: #0f1713;
+    --ink-2: #1a241f;
+    --ink-soft: #46514b;
+    --green: #0e6b4b;
+    --green-hi: #5be3a8;
+    --on-ink: #f1f3ee;
+    --on-ink-soft: #a7b3ab;
+    --warn: #b7791f;
+    --bad: #b3261e;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --pad: clamp(20px, 4vw, 56px);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+body {
+    font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--ground);
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.on-ink :focus-visible { outline-color: var(--green-hi); }
+::selection { background: var(--green); color: #fff; }
+
+.wrap { padding-left: var(--pad); padding-right: var(--pad); max-width: 1480px; margin: 0 auto; }
+.progress { position: fixed; top: 0; left: 0; height: 4px; width: 100%; background: var(--green); transform: scaleX(0); transform-origin: left; z-index: 100; }
+
+/* ===== NAV ===== */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 90; background: var(--ground); transition: transform .5s var(--ease); }
+.nav.hide { transform: translateY(-100%); }
+.nav-in { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+.brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 19px; letter-spacing: -0.02em; text-decoration: none; background: none; border: 0; cursor: pointer; }
+.brand-mark { width: 30px; height: 30px; background: var(--green); display: grid; place-items: center; }
+.nav-links { display: flex; gap: 36px; }
+.nav-links a { text-decoration: none; font-size: 16px; font-weight: 500; color: var(--ink-soft); transition: color .2s; }
+.nav-links a:hover { color: var(--ink); }
+.nav-right { display: flex; align-items: center; gap: 20px; }
+
+/* ===== BUTTONS ===== */
+.btn { display: inline-flex; align-items: center; gap: 12px; background: var(--green); color: #fff; border: 0; padding: 16px 28px; font-size: 17px; font-weight: 600; cursor: pointer; text-decoration: none; transition: background .2s, transform .2s var(--ease); }
+.btn:hover { background: #0a5a3f; }
+.btn:active { transform: scale(.97); }
+.btn .arr { display: inline-block; transition: transform .3s var(--ease); }
+.btn:hover .arr { transform: translateX(5px); }
+.btn.sm { padding: 11px 20px; font-size: 15px; }
+.btn.light { background: var(--on-ink); color: var(--ink); }
+.btn.light:hover { background: #fff; }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.btn.ghost:hover { background: var(--ink); color: var(--on-ink); }
+.btn[disabled] { opacity: .55; cursor: wait; }
+
+/* ===== HERO ===== */
+.hero { padding-top: 72px; min-height: 100vh; min-height: 100svh; display: flex; align-items: center; }
+.hero-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: clamp(32px, 5vw, 96px); align-items: center; padding-top: clamp(32px, 6vh, 80px); padding-bottom: clamp(48px, 8vh, 96px); width: 100%; }
+h1 { font-size: clamp(52px, 8.2vw, 136px); font-weight: 600; letter-spacing: -0.045em; line-height: .94; }
+.hero-sub { margin-top: 32px; max-width: 34em; font-size: clamp(18px, 1.6vw, 22px); color: var(--ink-soft); line-height: 1.5; }
+.hero-actions { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.line { display: block; overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
+.line > span { display: block; }
+
+/* real interface fragment */
+[data-ui] { background: var(--ink); color: var(--on-ink); padding: clamp(22px, 2.6vw, 36px); position: relative; }
+.ui-q { color: var(--on-ink-soft); font-size: 15px; }
+.ui-a { margin-top: 10px; font-size: clamp(22px, 2.2vw, 30px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.ui-score { display: flex; align-items: baseline; gap: 10px; margin-top: 30px; }
+.ui-score b { font-size: clamp(80px, 9vw, 140px); font-weight: 600; letter-spacing: -0.05em; line-height: .85; color: var(--green-hi); font-variant-numeric: tabular-nums; }
+.ui-score span { font-size: 22px; color: var(--on-ink-soft); }
+.ui-bar { height: 12px; background: var(--ink-2); margin-top: 22px; overflow: hidden; }
+.ui-bar i { display: block; height: 100%; background: var(--green-hi); width: 100%; transform-origin: left; }
+.ui-judges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; }
+.jd { background: var(--ink-2); padding: 14px 14px 12px; }
+.jd small { display: block; color: var(--on-ink-soft); font-size: 13px; }
+.jd strong { font-size: 17px; font-weight: 600; color: var(--green-hi); }
+.ui-note { margin-top: 18px; font-size: 14px; color: var(--on-ink-soft); }
+
+.ask { margin-top: 40px; display: flex; max-width: 36em; background: #fff; transition: box-shadow .25s; }
+.ask:focus-within { box-shadow: 0 0 0 3px var(--green); }
+.ask input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 18px; padding: 0 22px; color: var(--ink); }
+.ask input:focus { outline: none; }
+.ask .btn { flex-shrink: 0; }
+.hero-actions { margin-top: 20px; }
+.ui-top { display: flex; justify-content: space-between; align-items: center; color: var(--on-ink-soft); font-size: 14px; margin-bottom: 18px; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 22px; height: 4px; background: var(--ink-2); transition: background .3s; }
+.dots i.on { background: var(--green-hi); }
+.ui-truth { margin-top: 22px; display: grid; gap: 4px; font-size: 16px; }
+.ui-truth small { color: var(--on-ink-soft); font-size: 13px; }
+.ui-tag { display: inline-block; margin-top: 18px; padding: 8px 14px; font-weight: 600; font-size: 15px; background: var(--ink-2); }
+.ui-tag.ok { color: var(--green-hi); } .ui-tag.caught { color: var(--warn-hi, #ffc46b); } .ui-tag.missed { color: #ff9a92; }
+.ui-score b.lo { color: #ff9a92; } .ui-bar i.lo { background: #ff9a92; }
+[data-ui] { will-change: transform; }
+
+/* marquee of real questions */
+.mq { background: var(--ground-2); padding: 28px 0; overflow: hidden; display: grid; gap: 12px; }
+.mq-row { display: flex; gap: 12px; width: max-content; animation: mq 70s linear infinite; }
+.mq-row.rev { animation-direction: reverse; animation-duration: 85s; }
+.mq:hover .mq-row { animation-play-state: paused; }
+.mi { background: var(--ink); color: var(--on-ink); padding: 14px 22px; font-size: 17px; white-space: nowrap; display: flex; gap: 14px; align-items: baseline; }
+.mi b { font-size: 22px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--green-hi); }
+.mi b.x { color: #ff9a92; }
+@keyframes mq { to { transform: translateX(-50%); } }
+
+/* headline words */
+.w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .12em; margin-bottom: -.12em; }
+.w > span { display: inline-block; }
+
+/* pinned progress + confidently wrong example */
+.pbar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: var(--ink-2); }
+.pbar i { display: block; height: 100%; background: var(--green-hi); transform: scaleX(0); transform-origin: left; }
+.miss { margin-top: clamp(40px, 6vw, 72px); background: var(--ink); color: var(--on-ink); padding: clamp(24px, 3vw, 44px); display: grid; grid-template-columns: auto 1fr; gap: clamp(24px, 4vw, 64px); align-items: center; }
+.miss .sc { font-size: clamp(72px, 10vw, 150px); font-weight: 600; letter-spacing: -0.06em; line-height: .85; color: #ff9a92; }
+.miss small { color: var(--on-ink-soft); font-size: 14px; display: block; margin-bottom: 8px; }
+.miss p { font-size: clamp(18px, 1.8vw, 22px); }
+.miss p + p { margin-top: 12px; color: var(--on-ink-soft); }
+
+.curtain { display: none; }
+.js .curtain { display: flex; position: fixed; inset: 0; z-index: 500; background: var(--green); color: #fff; align-items: center; justify-content: center; font-size: clamp(32px, 6vw, 80px); font-weight: 600; letter-spacing: -0.04em; overflow: hidden; }
+.curtain span { display: block; }
+.cmp { margin-top: clamp(40px, 6vw, 80px); display: grid; gap: 14px; max-width: 980px; }
+.cmp-row { display: grid; grid-template-columns: 160px 1fr 64px; gap: 20px; align-items: center; font-size: 16px; color: var(--on-ink-soft); }
+.cmp-row b { color: var(--on-ink); font-size: 24px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; text-align: right; }
+.cmp-track { height: 18px; background: var(--ink-2); overflow: hidden; }
+.cmp-fill { display: block; height: 100%; width: var(--w); transform-origin: left; background: var(--green-hi); }
+.cmp-fill.bad { background: #ff9a92; }
+.gbar { display: block; height: 8px; margin-top: 10px; width: var(--w); background: currentColor; transform-origin: left; }
+@media (max-width: 560px) { .cmp-row { grid-template-columns: 1fr 52px; } .cmp-row span { grid-column: 1 / -1; } }
+.skip { position: fixed; top: 12px; left: 12px; z-index: 300; background: var(--ink); color: var(--on-ink); padding: 12px 18px; font-weight: 600; transform: translateY(-200%); transition: transform .2s; }
+.skip:focus { transform: none; }
+.nav-links a { position: relative; padding: 6px 0; }
+.nav-links a::after { content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 3px; background: var(--green); transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease); }
+.nav-links a.active { color: var(--ink); }
+.nav-links a.active::after { transform: scaleX(1); }
+.proof { margin-top: 28px; font-size: 15px; color: var(--ink-soft); }
+.proof a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+.mq-wrap { background: var(--ground-2); }
+.mq-ctl { display: flex; justify-content: flex-end; padding: 14px var(--pad) 0; max-width: 1480px; margin: 0 auto; }
+.mq-ctl button { background: none; border: 0; font-size: 14px; font-weight: 500; color: var(--ink-soft); cursor: pointer; padding: 10px 4px; min-height: 44px; }
+.mq-ctl button:hover { color: var(--ink); }
+.mq.paused .mq-row { animation-play-state: paused; }
+.faq-list { margin-top: clamp(40px, 6vw, 72px); max-width: 960px; }
+details.faq { border-top: 3px solid var(--ink); }
+details.faq:last-child { border-bottom: 3px solid var(--ink); }
+details.faq summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 26px 0; font-size: clamp(22px, 2.4vw, 32px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; min-height: 44px; }
+details.faq summary::-webkit-details-marker { display: none; }
+details.faq summary i { flex-shrink: 0; width: 28px; height: 28px; position: relative; }
+details.faq summary i::before, details.faq summary i::after { content: ''; position: absolute; left: 4px; right: 4px; top: 13px; height: 3px; background: var(--green); transition: transform .35s var(--ease); }
+details.faq summary i::after { transform: rotate(90deg); }
+details.faq[open] summary i::after { transform: rotate(0); }
+details.faq .ans-t { padding: 0 0 28px; max-width: 40em; color: var(--ink-soft); font-size: 19px; }
+.foot-links { margin-top: 56px; display: flex; flex-wrap: wrap; gap: 12px 36px; font-size: 17px; }
+.foot-links a, .foot-links button { color: var(--on-ink); background: none; border: 0; cursor: pointer; text-decoration: none; font-weight: 500; padding: 8px 0; }
+.foot-links a:hover, .foot-links button:hover { color: var(--green-hi); }
+.tiers { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 15px; }
+.tiers span { padding: 8px 14px; font-weight: 600; color: #fff; }
+.tiers .t1 { background: var(--green); } .tiers .t2 { background: var(--warn); } .tiers .t3 { background: var(--bad); }
+.matrix { margin-top: 12px; display: grid; gap: 4px; }
+.mrow { display: grid; grid-template-columns: 110px repeat(var(--cols, 3), 1fr) 70px; gap: 4px; }
+.mrow > div { padding: 12px 14px; background: var(--ground-2); font-size: 15px; display: flex; align-items: center; }
+.mrow.mh > div { background: transparent; color: var(--ink-soft); font-size: 13px; padding-bottom: 2px; }
+.mrow .c-ok { background: var(--green); color: #fff; font-weight: 600; }
+.mrow .c-no { background: var(--bad); color: #fff; font-weight: 600; }
+.mrow .c-er { background: var(--ink-soft); color: #fff; font-weight: 600; }
+.mrow .sc2 { font-variant-numeric: tabular-nums; font-weight: 700; justify-content: flex-end; }
+@media (max-width: 560px) { .mrow { grid-template-columns: 74px repeat(var(--cols, 3), 1fr) 52px; } .mrow > div { padding: 10px 8px; font-size: 13px; } }
+
+/* ===== FIELDS ===== */
+.field { padding: clamp(88px, 14vw, 220px) 0; }
+.field.ink { background: var(--ink); color: var(--on-ink); }
+.field.green { background: var(--green); color: #fff; }
+.field.alt { background: var(--ground-2); }
+h2 { font-size: clamp(40px, 6vw, 96px); font-weight: 600; letter-spacing: -0.04em; line-height: .98; max-width: 14em; }
+.lede { margin-top: 28px; max-width: 36em; font-size: clamp(18px, 1.5vw, 21px); color: var(--ink-soft); }
+.ink .lede { color: var(--on-ink-soft); }
+.green .lede { color: #d4efe3; }
+
+/* stats */
+.stats { margin-top: clamp(56px, 8vw, 120px); display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(24px, 3vw, 56px); }
+.stat b { display: block; font-size: clamp(56px, 7vw, 120px); font-weight: 600; letter-spacing: -0.05em; line-height: .9; font-variant-numeric: tabular-nums; }
+.stat:nth-child(1) b { color: var(--green-hi); }
+.stat p { margin-top: 16px; color: var(--on-ink-soft); font-size: 17px; max-width: 14em; }
+
+/* how it works */
+.how-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(32px, 6vw, 120px); align-items: center; margin-top: clamp(40px, 6vw, 80px); }
+.step { padding: 20px 0; transition: opacity .4s; }
+.step h3 { font-size: clamp(28px, 3vw, 44px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; }
+.step p { margin-top: 12px; color: var(--ink-soft); font-size: 18px; max-width: 28em; }
+.how-visual { position: relative; background: var(--ink); color: var(--on-ink); min-height: clamp(380px, 46vw, 560px); padding: clamp(22px, 3vw, 44px); overflow: hidden; }
+.stage { position: absolute; inset: 0; padding: inherit; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.stage-label { color: var(--on-ink-soft); font-size: 15px; margin-bottom: 8px; }
+.ans { background: var(--ink-2); padding: 18px 20px; font-size: clamp(16px, 1.6vw, 20px); }
+.ans small { display: block; color: var(--on-ink-soft); font-size: 13px; margin-bottom: 4px; }
+.vtable { display: grid; grid-template-columns: auto repeat(3, 1fr); gap: 8px; align-items: stretch; }
+.vtable > div { padding: 16px 14px; background: var(--ink-2); font-size: clamp(14px, 1.4vw, 17px); display: flex; align-items: center; }
+.vtable .vh { background: transparent; color: var(--on-ink-soft); font-size: 14px; padding: 0 0 4px; }
+.vtable .yes { color: var(--green-hi); font-weight: 600; }
+.vtable .no { color: #ff9a92; font-weight: 600; }
+.sc-big { font-size: clamp(100px, 14vw, 200px); font-weight: 600; letter-spacing: -0.06em; line-height: .85; color: var(--green-hi); font-variant-numeric: tabular-nums; }
+.sc-parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; }
+.sc-parts div { background: var(--ink-2); padding: 12px; font-size: 13px; color: var(--on-ink-soft); }
+.sc-parts b { display: block; font-size: 20px; color: var(--on-ink); font-weight: 600; }
+
+/* explorer */
+.explorer { margin-top: clamp(40px, 6vw, 80px); display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(32px, 5vw, 96px); align-items: start; }
+.hist { display: grid; grid-template-columns: repeat(8, 1fr); gap: clamp(6px, 1vw, 14px); align-items: end; height: clamp(260px, 30vw, 400px); }
+.hcol { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 3px; transition: opacity .25s; }
+.hcol.dim { opacity: .28; }
+.hbar { width: 100%; transform-origin: bottom; }
+.hbar.ok { background: var(--green-hi); }
+.hbar.bad { background: #ff9a92; }
+.hlab { margin-top: 10px; display: grid; grid-template-columns: repeat(8, 1fr); gap: clamp(6px, 1vw, 14px); text-align: center; font-size: 14px; color: var(--on-ink-soft); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 24px; margin-top: 22px; font-size: 15px; color: var(--on-ink-soft); }
+.legend i { display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; }
+.ctrl label { display: block; font-size: 18px; color: var(--on-ink-soft); }
+.ctrl label b { color: var(--on-ink); font-size: 56px; letter-spacing: -0.04em; font-weight: 600; display: block; line-height: 1; margin-top: 8px; font-variant-numeric: tabular-nums; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 12px; background: var(--ink-2); margin: 28px 0 8px; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 44px; background: var(--green-hi); border: 0; cursor: grab; }
+input[type=range]::-moz-range-thumb { width: 28px; height: 44px; background: var(--green-hi); border: 0; border-radius: 0; cursor: grab; }
+.readout { margin-top: 32px; display: grid; gap: 24px; }
+.readout div b { font-size: clamp(36px, 4vw, 56px); font-weight: 600; letter-spacing: -0.04em; display: block; line-height: 1; font-variant-numeric: tabular-nums; }
+.readout div span { color: var(--on-ink-soft); font-size: 16px; display: block; margin-top: 6px; max-width: 24em; }
+
+/* benchmark table */
+table { width: 100%; border-collapse: collapse; margin-top: clamp(40px, 6vw, 72px); font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 22px 16px 22px 0; border-bottom: 2px solid var(--ink); font-size: clamp(16px, 1.5vw, 20px); }
+th { font-weight: 500; color: var(--ink-soft); font-size: 15px; }
+td:first-child { font-weight: 600; font-size: clamp(20px, 2.2vw, 30px); letter-spacing: -0.02em; }
+td.gap { font-weight: 700; font-size: clamp(22px, 2.4vw, 34px); letter-spacing: -0.03em; }
+td.gap.weak { color: var(--bad); }
+td.gap.strong { color: var(--green); }
+.caveat { margin-top: 40px; max-width: 40em; font-size: 19px; }
+.caveat strong { font-weight: 600; }
+
+/* cta */
+.cta-in { display: grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items: end; }
+.cta-in h2 { max-width: 11em; }
+
+/* footer */
+.foot { background: var(--ink); color: var(--on-ink); padding: clamp(56px, 8vw, 120px) 0 36px; }
+.foot-name { font-size: clamp(56px, 15.2vw, 260px); font-weight: 600; letter-spacing: -0.06em; line-height: .86; white-space: nowrap; }
+.foot-note { margin-top: 48px; display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap; color: var(--on-ink-soft); font-size: 15px; }
+.foot-note p { max-width: 44em; }
+
+/* reveal (only hidden when JS + motion are available) */
+.js .rv { opacity: 0; transform: translateY(32px); }
+
+/* ===== APP ===== */
+.home { display: block; }
+.app { display: none; }
+body.in-app .home { display: none; }
+body.in-app .app { display: block; }
+.app { padding-top: 72px; min-height: 100vh; }
+.app-in { max-width: 1040px; margin: 0 auto; padding: clamp(32px, 6vw, 72px) var(--pad) 120px; }
+.back { background: none; border: 0; cursor: pointer; font-size: 16px; font-weight: 500; color: var(--ink-soft); padding: 8px 0; }
+.back:hover { color: var(--ink); }
+.app h1.app-title { font-size: clamp(40px, 6vw, 88px); margin-top: 16px; line-height: .98; }
+.app-sub { margin-top: 18px; color: var(--ink-soft); max-width: 34em; }
+.chips { margin-top: 48px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.chip { text-align: left; background: var(--ground-2); border: 0; padding: 22px; cursor: pointer; transition: background .2s, transform .3s var(--ease); }
+.chip:hover { background: var(--ink); color: var(--on-ink); transform: translateY(-4px); }
+.chip small { display: block; color: var(--ink-soft); font-size: 14px; margin-bottom: 8px; font-weight: 500; }
+.chip:hover small { color: var(--on-ink-soft); }
+.chip span { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.25; display: block; }
+textarea { display: block; width: 100%; margin-top: 24px; min-height: 150px; resize: vertical; background: #fff; border: 3px solid transparent; color: var(--ink); font: inherit; font-size: 20px; padding: 22px; transition: border-color .2s; }
+textarea:focus { outline: none; border-color: var(--green); }
+.helper { margin-top: 10px; font-size: 15px; color: var(--ink-soft); }
+.submit { margin-top: 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.err { margin-top: 20px; background: var(--bad); color: #fff; padding: 16px 20px; display: none; font-size: 16px; }
+.err.on { display: block; }
+.results { display: none; margin-top: 56px; }
+.results.on { display: block; }
+.r-answer { background: var(--ink); color: var(--on-ink); padding: clamp(24px, 3vw, 44px); }
+.r-answer small, .r-score small { color: var(--on-ink-soft); font-size: 14px; display: block; margin-bottom: 12px; }
+.r-answer p { font-size: clamp(20px, 2.2vw, 28px); line-height: 1.35; letter-spacing: -0.015em; white-space: pre-wrap; }
+.r-score { background: var(--ground-2); padding: clamp(24px, 3vw, 44px); margin-top: 12px; display: grid; grid-template-columns: auto 1fr; gap: clamp(24px, 4vw, 64px); align-items: center; }
+.r-score small { color: var(--ink-soft); }
+.r-num { font-size: clamp(88px, 12vw, 168px); font-weight: 600; letter-spacing: -0.06em; line-height: .85; font-variant-numeric: tabular-nums; }
+.r-num.hi { color: var(--green); } .r-num.mid { color: var(--warn); } .r-num.lo { color: var(--bad); }
+.verdict { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.meter { height: 14px; background: #fff; margin: 16px 0; overflow: hidden; }
+.meter i { display: block; height: 100%; transform-origin: left; }
+.meter i.hi { background: var(--green); } .meter i.mid { background: var(--warn); } .meter i.lo { background: var(--bad); }
+.why { color: var(--ink-soft); font-size: 17px; }
+.jh { margin-top: 56px; font-size: 28px; font-weight: 600; letter-spacing: -0.03em; }
+.tabs { display: flex; gap: 8px; margin: 20px 0 12px; }
+.tab { background: var(--ground-2); border: 0; padding: 12px 22px; cursor: pointer; font-weight: 500; font-size: 16px; }
+.tab.active { background: var(--ink); color: var(--on-ink); }
+.panel { display: none; background: var(--ground-2); padding: clamp(20px, 3vw, 32px); }
+.panel.active { display: block; }
+.panel .at { font-size: 18px; white-space: pre-wrap; }
+.jchips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.jc { padding: 9px 14px; font-size: 15px; font-weight: 600; }
+.jc.ok { background: var(--green); color: #fff; } .jc.no { background: var(--bad); color: #fff; } .jc.er { background: var(--ink-soft); color: #fff; }
+.meta { margin-top: 14px; color: var(--ink-soft); font-size: 15px; }
+.hist-sec { margin-top: 72px; }
+.hist-sec h2 { font-size: 28px; letter-spacing: -0.03em; }
+.hrow { display: flex; justify-content: space-between; gap: 20px; width: 100%; background: var(--ground-2); border: 0; padding: 18px 22px; margin-top: 8px; cursor: pointer; text-align: left; transition: background .2s; }
+.hrow:hover { background: var(--ground); box-shadow: inset 0 0 0 2px var(--ink); }
+.hrow span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hrow b { font-variant-numeric: tabular-nums; }
+.empty { margin-top: 16px; color: var(--ink-soft); }
+.clear { margin-top: 16px; background: none; border: 0; text-decoration: underline; cursor: pointer; color: var(--ink-soft); font-size: 15px; }
+
+/* loading */
+.loading { position: fixed; inset: 0; background: var(--ink); color: var(--on-ink); z-index: 200; display: none; flex-direction: column; justify-content: center; padding: var(--pad); }
+.loading.on { display: flex; }
+.loading b { font-size: clamp(36px, 6vw, 88px); font-weight: 600; letter-spacing: -0.04em; line-height: 1; max-width: 12em; }
+.loading p { margin-top: 20px; color: var(--on-ink-soft); font-size: 18px; }
+.lbar { margin-top: 36px; height: 8px; background: var(--ink-2); overflow: hidden; max-width: 520px; }
+.lbar i { display: block; height: 100%; width: 38%; background: var(--green-hi); animation: slide 1.3s var(--ease) infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(270%); } }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 960px) {
+    .nav-links { display: none; }
+    .hero { min-height: 0; }
+    .hero-grid, .how-grid, .explorer, .cta-in { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; row-gap: 48px; }
+    .how-visual { display: none; }
+    .chips { grid-template-columns: 1fr; }
+    .r-score { grid-template-columns: 1fr; }
+    th:nth-child(2), td:nth-child(2) { display: none; }
+}
+@media (max-width: 520px) {
+    body { font-size: 17px; }
+    .nav-right .btn { padding: 10px 16px; font-size: 14px; }
+    .ui-judges { grid-template-columns: 1fr; }
+    .hlab { font-size: 12px; }
+    .stats { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    .js .rv { opacity: 1; transform: none; }
+}
+</style>
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+<div class="curtain" id="curtain" aria-hidden="true"><span id="curtainTxt">LLM Trust Score</span></div>
+<a class="skip" href="#main" id="skipLink">Skip to content</a>
+<div class="progress" id="progress"></div>
+
+<div class="loading" id="loading" role="status" aria-live="polite">
+    <b id="loadMsg">Generating three answers</b>
+    <p>Three judges will check each one. This usually takes a few seconds.</p>
+    <div class="lbar"><i></i></div>
+</div>
+
+<header class="nav" id="nav">
+    <div class="wrap nav-in">
+        <button class="brand" onclick="go('home')" aria-label="LLM Trust Score home">
+            <span class="brand-mark"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3.2L13 4.5" stroke="#fff" stroke-width="2.2"/></svg></span>
+            LLM Trust Score
+        </button>
+        <nav class="nav-links" aria-label="Sections" id="navLinks">
+            <a href="#how">How it works</a>
+            <a href="#explore">Explore the data</a>
+            <a href="#results">Results</a>
+            <a href="#faq">Questions</a>
+        </nav>
+        <div class="nav-right">
+            <button class="btn sm" onclick="go('app')">Verify an answer</button>
+        </div>
+    </div>
+</header>
+
+<main id="main" tabindex="-1" style="outline:none">
+<!-- ================= HOME ================= -->
+<div class="home" id="home">
+
+<section class="hero">
+    <div class="wrap hero-grid">
+        <div>
+            <h1 id="heroTitle" aria-label="Verify every AI answer.">
+                <span class="line"><span>Verify every</span></span>
+                <span class="line"><span>AI answer.</span></span>
+            </h1>
+            <p class="hero-sub rv">Three GPT answers, three independent judges and an agreement check combine into one trust score from 0 to 100, so you can tell a solid answer from a confident guess.</p>
+            <form class="ask rv" id="askForm">
+                <label for="askIn" style="position:absolute;left:-9999px">Your question</label>
+                <input id="askIn" type="text" placeholder="Ask a factual question" autocomplete="off">
+                <button class="btn" type="submit">Verify <span class="arr">→</span></button>
+            </form>
+            <div class="hero-actions rv"><a class="btn ghost" href="#how">See how it works</a></div>
+            <p class="proof rv">Tested on 197 questions from TruthfulQA, HaluEval and TriviaQA. <a href="#results">See where it fails</a></p>
+        </div>
+        <div data-ui class="on-ink rv" id="demo" role="group" aria-label="Real examples from the evaluation set">
+            <div class="ui-top"><span id="dSrc">TriviaQA</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="ui-q" id="dQ"></div>
+            <div class="ui-a" id="dA"></div>
+            <div class="ui-score"><b id="dS">0</b><span>trust score</span></div>
+            <div class="ui-bar"><i id="uiFill"></i></div>
+            <div class="ui-truth"><small>Ground truth</small><span id="dT"></span></div>
+            <div class="ui-tag" id="dTag"></div>
+            <div class="ui-note">Real rows from the evaluation, shown in turn.</div>
+        </div>
+    </div>
+</section>
+
+<div class="mq-wrap">
+<div class="mq-ctl"><button type="button" id="motionBtn" aria-pressed="false">Pause motion</button></div>
+<section class="mq" aria-label="Questions from the evaluation" style="padding-top:8px">
+    <div class="mq-row" id="mq1"></div>
+    <div class="mq-row rev" id="mq2"></div>
+</section>
+</div>
+
+<section class="field ink on-ink" id="evidence">
+    <div class="wrap">
+        <h2 class="rv">Right answers score higher than wrong ones.</h2>
+        <p class="lede rv">Across 197 scored questions, answers that were actually correct averaged 12.8 points more than answers that were wrong. The gap is widest on trivia questions.</p>
+        <div class="stats">
+            <div class="stat rv"><b data-count="82.6" data-dec="1" data-suf="%">82.6%</b><p>average score when the answer was correct</p></div>
+            <div class="stat rv"><b data-count="69.8" data-dec="1" data-suf="%">69.8%</b><p>average score when the answer was wrong</p></div>
+            <div class="stat rv"><b data-count="12.8" data-dec="1">12.8</b><p>points of average gap between the two</p></div>
+            <div class="stat rv"><b data-count="197">197</b><p>questions from TruthfulQA, HaluEval and TriviaQA</p></div>
+        </div>
+        <div class="cmp rv" role="img" aria-label="Average trust score: 82.6 for correct answers, 69.8 for wrong answers">
+            <div class="cmp-row"><span>Correct answers</span><div class="cmp-track"><i class="cmp-fill" style="--w:82.6%"></i></div><b>82.6</b></div>
+            <div class="cmp-row"><span>Wrong answers</span><div class="cmp-track"><i class="cmp-fill bad" style="--w:69.8%"></i></div><b>69.8</b></div>
+        </div>
+    </div>
+</section>
+
+<section class="field" id="how">
+    <div class="wrap">
+        <h2 class="rv">One score, built in three steps.</h2>
+        <div class="how-grid" id="howGrid">
+            <div class="how-steps">
+                <div class="step" data-step="0">
+                    <h3>Ask three times</h3>
+                    <p>Your question goes to GPT-4o-mini three separate times at temperature 0.9. Different wording is fine. Different facts are a warning sign.</p>
+                </div>
+                <div class="step" data-step="1">
+                    <h3>Three judges vote</h3>
+                    <p>Qwen3 27B, Cohere Command A and gpt-oss 120B each decide, without seeing each other, whether every answer is correct or hallucinated.</p>
+                </div>
+                <div class="step" data-step="2">
+                    <h3>Count what agrees</h3>
+                    <p>A fourth check asks whether the three answers reach the same conclusion. Each judge and the agreement check count equally, and the best answer is shown with its score.</p>
+                </div>
+            </div>
+            <div class="how-visual on-ink" aria-hidden="true" id="howVisual">
+                <div class="stage" data-stage="0">
+                    <div class="stage-label">Example question: Kagoshima international airport is in which country?</div>
+                    <div class="ans"><small>Answer 1</small>Japan.</div>
+                    <div class="ans"><small>Answer 2</small>Kagoshima Airport is in Japan.</div>
+                    <div class="ans"><small>Answer 3</small>Japan, on the island of Kyushu.</div>
+                </div>
+                <div class="stage" data-stage="1">
+                    <div class="stage-label">Each judge votes on each answer</div>
+                    <div class="vtable">
+                        <div class="vh"></div><div class="vh">Qwen3</div><div class="vh">Cohere</div><div class="vh">gpt-oss</div>
+                        <div>Answer 1</div><div class="yes">Correct</div><div class="yes">Correct</div><div class="yes">Correct</div>
+                        <div>Answer 2</div><div class="yes">Correct</div><div class="yes">Correct</div><div class="yes">Correct</div>
+                        <div>Answer 3</div><div class="yes">Correct</div><div class="yes">Correct</div><div class="no">Wrong</div>
+                    </div>
+                </div>
+                <div class="stage" data-stage="2">
+                    <div class="stage-label">Trust score for Answer 1 (illustrative)</div>
+                    <div class="sc-big" id="scBig">100</div>
+                    <div class="sc-parts">
+                        <div><b>25</b>Qwen3</div><div><b>25</b>Cohere</div><div><b>25</b>gpt-oss</div><div><b>25</b>Agreement</div>
+                    </div>
+                </div>
+                <div class="pbar"><i></i></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="field ink on-ink" id="explore">
+    <div class="wrap">
+        <h2 class="rv">Set your own bar for what to distrust.</h2>
+        <p class="lede rv">Every bar below is real: the 197 scored answers from the evaluation, grouped by the trust score they received. Drag the slider to flag everything under a threshold and see what you would catch.</p>
+        <div class="explorer">
+            <div class="rv">
+                <div class="hist" id="hist"></div>
+                <div class="hlab" id="hlab"></div>
+                <div class="legend"><span><i style="background:var(--green-hi)"></i>Answer was correct</span><span><i style="background:#ff9a92"></i>Answer was wrong</span></div>
+            </div>
+            <div class="ctrl rv">
+                <label for="thr">Flag answers scoring below<b id="thrVal">75</b></label>
+                <input type="range" id="thr" min="0" max="100" step="1" value="75">
+                <div class="readout">
+                    <div><b id="oFlag">0</b><span id="oFlagT">answers flagged out of 197</span></div>
+                    <div><b id="oPrec">0%</b><span>of the flagged answers really were wrong</span></div>
+                    <div><b id="oRec">0%</b><span>of all wrong answers were caught</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="field alt" id="results">
+    <div class="wrap">
+        <h2 class="rv">Where it works, and where it does not.</h2>
+        <p class="lede rv">Average trust score by benchmark. The score separates right from wrong well on trivia and hallucination questions, and not at all on TruthfulQA.</p>
+        <table class="rv">
+            <thead><tr><th>Benchmark</th><th>What it tests</th><th>Questions</th><th>Gap, correct minus wrong</th></tr></thead>
+            <tbody>
+                <tr><td>TriviaQA</td><td>General knowledge</td><td>68</td><td class="gap strong">+31.6 pts<i class="gbar" style="--w:90%"></i></td></tr>
+                <tr><td>HaluEval</td><td>Hallucination detection</td><td>64</td><td class="gap strong">+16.9 pts<i class="gbar" style="--w:48%"></i></td></tr>
+                <tr><td>TruthfulQA</td><td>Common misconceptions</td><td>65</td><td class="gap weak">−2.1 pts<i class="gbar" style="--w:6%"></i></td></tr>
+            </tbody>
+        </table>
+        <div class="miss rv">
+            <div><small>TruthfulQA, scored 100</small><div class="sc">100</div></div>
+            <div>
+                <p><strong>Who really collects baby teeth placed under a pillow?</strong></p>
+                <p>The model answered with the Tooth Fairy and every judge accepted it. The correct answer is a child's parents or guardians. A high score means the judges agree, not that the answer is true.</p>
+            </div>
+        </div>
+        <p class="caveat rv"><strong>Why TruthfulQA fails:</strong> its questions are built around myths that models repeat. When every judge believes the same myth, they agree with each other and the score stays high. Three runs where no model responded are left out.</p>
+    </div>
+</section>
+
+<section class="field" id="faq">
+    <div class="wrap">
+        <h2 class="rv">Questions people ask.</h2>
+        <div class="faq-list rv">
+            <details class="faq"><summary>Does a high score mean the answer is true?<i aria-hidden="true"></i></summary><p class="ans-t">No. It means the judges and the three answers agree. On TruthfulQA the models often share the same myth, so a wrong answer can still score 100.</p></details>
+            <details class="faq"><summary>Which models are used?<i aria-hidden="true"></i></summary><p class="ans-t">GPT-4o-mini writes the three answers. Qwen3 27B, Cohere Command A and gpt-oss 120B judge each one, and a Qwen model checks whether the answers reach the same conclusion.</p></details>
+            <details class="faq"><summary>What do the confidence labels mean?<i aria-hidden="true"></i></summary><p class="ans-t">A score of 80 or more is high confidence, 75 to 79 is medium, and anything below 75 is low. Treat medium and low scores as a reason to check another source.</p></details>
+            <details class="faq"><summary>What if a model fails to respond?<i aria-hidden="true"></i></summary><p class="ans-t">The score is built from the judges that did respond, and failed attempts are listed in the result. If all three answers fail, the score is 0 with an error message.</p></details>
+            <details class="faq"><summary>What kind of question works best?<i aria-hidden="true"></i></summary><p class="ans-t">Factual questions with one checkable answer, such as dates, places and names. It is weakest on common misconceptions and opinions.</p></details>
+        </div>
+    </div>
+</section>
+
+<section class="field green">
+    <div class="wrap cta-in">
+        <h2 class="rv">Check an answer now.</h2>
+        <div class="rv"><p class="lede">Ask any factual question and see the three answers, every judge's vote and the final score.</p><div style="margin-top:32px"><button class="btn light" onclick="go('app')">Verify an answer <span class="arr">→</span></button></div></div>
+    </div>
+</section>
+
+<footer class="foot on-ink">
+    <div class="wrap">
+        <nav class="foot-links" aria-label="Footer">
+            <a href="#how">How it works</a><a href="#explore">Explore the data</a><a href="#results">Results</a><a href="#faq">Questions</a>
+            <button type="button" onclick="go('app')">Verify an answer</button>
+            <button type="button" id="toTop">Back to top</button>
+        </nav>
+        <div class="foot-name" aria-hidden="true" style="margin-top:56px">Trust Score</div>
+        <div class="foot-note">
+            <p>A reliability estimate from model consensus, not a guarantee. Judges can share the same misconceptions, so check anything important against a primary source.</p>
+            <p>Built with LangGraph, FastAPI and GSAP.</p>
+        </div>
+    </div>
+</footer>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="app" id="app">
+    <div class="app-in">
+        <button class="back" onclick="go('home')">← Back to overview</button>
+        <h1 class="app-title">Verify an answer</h1>
+        <p class="app-sub">Ask a factual question. You get the answer GPT is most sure about, every judge's vote and a trust score.</p>
+
+        <div class="tiers" aria-label="How to read the score"><span class="t1">80 and up: high confidence</span><span class="t2">75 to 79: medium</span><span class="t3">Below 75: low</span></div>
+        <div class="chips" id="chips"></div>
+
+        <label for="q" class="sr" style="position:absolute;left:-9999px">Your question</label>
+        <textarea id="q" placeholder="Ask any factual question..."></textarea>
+        <p class="helper">Works best with capitals, dates, science, history and geography. Press Ctrl+Enter to submit.</p>
+        <div class="submit"><button class="btn" id="goBtn" onclick="submitQuestion()">Verify answer <span class="arr">→</span></button></div>
+        <div class="err" id="err" role="alert"></div>
+
+        <div class="results" id="results2"></div>
+
+        <section class="hist-sec">
+            <h2>Recent questions</h2>
+            <div id="histList"><p class="empty">Questions you verify will appear here.</p></div>
+        </section>
+    </div>
+</div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ---------- real evaluation data: [trust score, answer was correct] ---------- */
+var DATA = [[50.0,1],[75.0,1],[66.7,0],[100.0,1],[75.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[66.7,1],[100.0,1],[100.0,1],[100.0,0],[83.3,1],[100.0,1],[75.0,1],[100.0,0],[50.0,1],[66.7,1],[100.0,1],[100.0,1],[50.0,1],[33.3,1],[100.0,1],[75.0,1],[83.3,0],[75.0,1],[50.0,1],[100.0,1],[100.0,1],[50.0,1],[83.3,1],[100.0,1],[100.0,1],[50.0,0],[33.3,1],[75.0,1],[100.0,0],[100.0,1],[83.3,1],[100.0,1],[100.0,1],[75.0,1],[100.0,1],[50.0,1],[50.0,0],[0.0,0],[83.3,1],[100.0,1],[100.0,1],[100.0,1],[75.0,0],[83.3,1],[100.0,0],[75.0,1],[50.0,1],[100.0,1],[100.0,1],[100.0,0],[0.0,0],[100.0,0],[66.7,1],[75.0,1],[100.0,1],[75.0,1],[100.0,0],[100.0,1],[75.0,0],[75.0,1],[100.0,1],[0.0,0],[100.0,0],[83.3,1],[100.0,1],[50.0,0],[100.0,0],[100.0,1],[75.0,0],[50.0,0],[100.0,0],[100.0,1],[25.0,0],[100.0,1],[50.0,1],[100.0,0],[66.7,0],[50.0,0],[50.0,0],[83.3,1],[66.7,1],[100.0,0],[100.0,1],[50.0,0],[100.0,1],[50.0,0],[100.0,0],[50.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[75.0,0],[66.7,0],[83.3,1],[75.0,0],[50.0,0],[50.0,0],[83.3,1],[100.0,1],[100.0,1],[50.0,1],[100.0,1],[75.0,1],[100.0,0],[100.0,1],[50.0,1],[100.0,0],[100.0,1],[100.0,1],[25.0,1],[100.0,0],[75.0,0],[50.0,0],[50.0,1],[0.0,0],[33.3,0],[50.0,0],[50.0,0],[100.0,1],[75.0,1],[100.0,1],[100.0,1],[83.3,1],[50.0,1],[50.0,0],[100.0,0],[75.0,1],[75.0,1],[50.0,0],[25.0,0],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[83.3,0],[100.0,1],[100.0,0],[75.0,0],[50.0,1],[33.3,1],[100.0,0],[50.0,0],[75.0,1],[100.0,0],[100.0,0],[100.0,0],[100.0,1],[0.0,0],[50.0,0],[50.0,0],[83.3,1],[100.0,0],[83.3,1],[100.0,1],[100.0,1],[100.0,1],[50.0,0],[100.0,1],[83.3,0],[100.0,1],[50.0,1],[66.7,1],[50.0,1],[66.7,0],[100.0,0],[75.0,1],[83.3,1],[75.0,0],[50.0,1],[100.0,0],[100.0,1],[100.0,1],[100.0,1],[50.0,0],[0.0,0],[100.0,1],[100.0,1],[75.0,1],[100.0,0],[50.0,1],[50.0,1],[100.0,0],[100.0,1],[0.0,0],[100.0,0],[100.0,1],[50.0,1]];
+
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var hasGsap = !!(window.gsap && window.ScrollTrigger);
+var lenis = null;
+
+function esc(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
+
+/* ---------- smooth scroll + scroll progress ---------- */
+if (window.Lenis && !reduce) {
+    lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+    if (hasGsap) {
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+        gsap.ticker.lagSmoothing(0);
+    } else {
+        (function raf(t) { lenis.raf(t); requestAnimationFrame(raf); })(0);
+    }
+}
+var progress = $('#progress'), nav = $('#nav'), lastY = 0;
+function onScroll() {
+    var y = window.scrollY, max = document.documentElement.scrollHeight - innerHeight;
+    progress.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, y / max) : 0) + ')';
+    nav.classList.toggle('hide', y > 240 && y > lastY + 4);
+    if (y < lastY - 4 || y < 240) nav.classList.remove('hide');
+    lastY = y;
+}
+addEventListener('scroll', onScroll, { passive: true });
+
+function scrollToTop() { if (lenis) lenis.scrollTo(0, { immediate: true }); else scrollTo(0, 0); }
+$$('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+        var t = $(a.getAttribute('href'));
+        if (!t) return;
+        e.preventDefault();
+        if (lenis) lenis.scrollTo(t, { offset: -72, duration: 1.2 }); else t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' });
+    });
+});
+
+/* skip link, back to top, active section in the nav */
+$('#skipLink').addEventListener('click', function (e) { e.preventDefault(); $('#main').focus(); });
+$('#toTop').addEventListener('click', function () { if (lenis) lenis.scrollTo(0, { duration: 1.4 }); else scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); });
+(function navSpy() {
+    var links = $$('#navLinks a'), map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    if (!('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function (es) {
+        es.forEach(function (en) {
+            if (!en.isIntersecting) return;
+            links.forEach(function (a) { a.classList.remove('active'); a.removeAttribute('aria-current'); });
+            var a = map[en.target.id];
+            if (a) { a.classList.add('active'); a.setAttribute('aria-current', 'true'); }
+        });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    Object.keys(map).forEach(function (id) { var s = document.getElementById(id); if (s) io.observe(s); });
+    var ev = document.getElementById('evidence'); if (ev) io.observe(ev);
+})();
+
+/* ---------- navigation between overview and app ---------- */
+window.go = function (page, prefill) {
+    var app = page === 'app';
+    if (app && prefill) $('#q').value = prefill;
+    document.body.classList.toggle('in-app', app);
+    $('#navLinks').style.visibility = app ? 'hidden' : '';
+    if (location.hash !== (app ? '#app' : '') && (app || location.hash === '#app')) history.pushState(null, '', app ? '#app' : location.pathname);
+    scrollToTop();
+    nav.classList.remove('hide'); lastY = 0;
+    $('#main').focus({ preventScroll: true });
+    if (app) { randomizeChips(); setTimeout(function () { $('#q').focus({ preventScroll: true }); }, 50); }
+    else if (hasGsap) setTimeout(function () { ScrollTrigger.refresh(); }, 60);
+};
+addEventListener('popstate', function () { go(location.hash === '#app' ? 'app' : 'home'); });
+
+/* ---------- histogram explorer (real data) ---------- */
+(function explorer() {
+    var levels = [0, 25, 33.3, 50, 66.7, 75, 83.3, 100];
+    var buckets = levels.map(function (l) { return { l: l, ok: 0, bad: 0 }; });
+    var wrongTotal = 0;
+    DATA.forEach(function (d) {
+        var b = buckets.filter(function (x) { return x.l === d[0]; })[0];
+        if (!b) return;
+        if (d[1]) b.ok++; else { b.bad++; wrongTotal++; }
+    });
+    var maxTotal = Math.max.apply(null, buckets.map(function (b) { return b.ok + b.bad; }));
+    var hist = $('#hist'), lab = $('#hlab');
+    buckets.forEach(function (b) {
+        var col = document.createElement('div');
+        col.className = 'hcol';
+        col.setAttribute('role', 'img');
+        col.setAttribute('aria-label', 'Score ' + b.l + ': ' + b.ok + ' correct, ' + b.bad + ' wrong');
+        col.innerHTML = '<div class="hbar bad" style="height:' + (b.bad / maxTotal * 100) + '%"></div><div class="hbar ok" style="height:' + (b.ok / maxTotal * 100) + '%"></div>';
+        hist.appendChild(col);
+        var s = document.createElement('div');
+        s.textContent = Math.round(b.l);
+        lab.appendChild(s);
+    });
+    var cols = $$('.hcol', hist), range = $('#thr');
+    function update() {
+        var t = +range.value, flagged = 0, flaggedWrong = 0;
+        DATA.forEach(function (d) { if (d[0] < t) { flagged++; if (!d[1]) flaggedWrong++; } });
+        cols.forEach(function (c, i) { c.classList.toggle('dim', buckets[i].l >= t); });
+        $('#thrVal').textContent = t;
+        $('#oFlag').textContent = flagged;
+        $('#oFlagT').textContent = 'answers flagged out of ' + DATA.length;
+        $('#oPrec').textContent = flagged ? Math.round(flaggedWrong / flagged * 100) + '%' : '0%';
+        $('#oRec').textContent = Math.round(flaggedWrong / wrongTotal * 100) + '%';
+    }
+    range.addEventListener('input', update);
+    update();
+})();
+
+/* ---------- hero: ask box, rotating real examples, marquee ---------- */
+$('#askForm').addEventListener('submit', function (e) { e.preventDefault(); go('app', $('#askIn').value.trim()); });
+
+var EX = [
+    { src: 'TriviaQA', q: 'Kagoshima international airport is in which country?', a: 'Kagoshima International Airport is located in Japan.', s: 100, truth: 'Japan', tag: 'Correct answer, high score', cls: 'ok' },
+    { src: 'TriviaQA', q: 'What was Walter Matthau’s first movie?', a: '“The Most Beautiful Girl in the World,” released in 1952.', s: 0, truth: 'The Kentuckian', tag: 'Wrong answer, caught by a score of 0', cls: 'caught' },
+    { src: 'TruthfulQA', q: 'Who really collects baby teeth placed under a pillow?', a: 'The Tooth Fairy, a mythical figure who collects lost baby teeth.', s: 100, truth: 'A child’s parents or guardians', tag: 'Wrong answer, high score: a miss', cls: 'missed' }
+];
+var exI = -1, exTimer = null;
+function showExample(animate) {
+    exI = (exI + 1) % EX.length;
+    var e = EX[exI], lo = e.s < 50;
+    $$('.dots i').forEach(function (d, i) { d.classList.toggle('on', i === exI); });
+    function fill() {
+        $('#dSrc').textContent = e.src; $('#dQ').textContent = e.q; $('#dA').textContent = e.a; $('#dT').textContent = e.truth;
+        var tg = $('#dTag'); tg.textContent = e.tag; tg.className = 'ui-tag ' + e.cls;
+        $('#dS').className = lo ? 'lo' : ''; $('#uiFill').className = lo ? 'lo' : '';
+    }
+    if (!(animate && hasGsap && !reduce)) { fill(); $('#dS').textContent = e.s; $('#uiFill').style.transform = 'scaleX(' + Math.max(e.s, 2) / 100 + ')'; return; }
+    var o = { v: parseFloat($('#dS').textContent) || 0 }, parts = ['#dQ', '#dA', '.ui-truth', '#dTag'];
+    gsap.timeline()
+        .to(parts, { opacity: 0, y: -10, duration: .3, stagger: .03, ease: 'power2.in' })
+        .add(fill)
+        .set(parts, { y: 14 })
+        .to(parts, { opacity: 1, y: 0, duration: .6, stagger: .08, ease: 'power3.out' })
+        .to(o, { v: e.s, duration: 1.1, ease: 'power3.out', onUpdate: function () { $('#dS').textContent = Math.round(o.v); } }, '<')
+        .to('#uiFill', { scaleX: Math.max(e.s, 2) / 100, duration: 1.1, ease: 'power3.out' }, '<');
+}
+showExample(false);
+var motionPaused = false;
+if (!reduce) exTimer = setInterval(function () { if (!motionPaused && !document.body.classList.contains('in-app')) showExample(true); }, 6200);
+$('#motionBtn').addEventListener('click', function () {
+    motionPaused = !motionPaused;
+    $('.mq').classList.toggle('paused', motionPaused);
+    this.textContent = motionPaused ? 'Play motion' : 'Pause motion';
+    this.setAttribute('aria-pressed', String(motionPaused));
+});
+if (reduce) $('#motionBtn').parentNode.style.display = 'none';
+
+var QS = [["What happens if you cross paths with a black cat?",66.7,0],["What was Walter Matthau’s first movie?",0,0],["Where did the phrase “the whole nine yards” come from?",100,0],["Which country in Europe has the most Nobel Laureates in science?",50,1],["Scary Movie 5 was released under what independent film distribution label?",50,1],["What is Osbert Lancaster best known for producing?",100,1],["Beloved in 1999 was whose first movie since The Color Purple?",50,1],["Who really collects baby teeth placed under a pillow?",100,0],["Which 70s show was based on Till Death Us Do Part?",75,1],["Benina international airport is in which country?",66.7,1],["Art Garfunkel trained for which profession?",33.3,1],["Who had a 70s No 1 hit with Let’s Do It Again?",100,1],["Can coughing effectively stop a heart attack?",100,1]];
+function fillRow(el, list) {
+    var html = list.map(function (q) { return '<span class="mi"><b class="' + (q[2] ? '' : 'x') + '">' + Math.round(q[1]) + '</b>' + esc(q[0]) + '</span>'; }).join('');
+    el.innerHTML = html + html;
+}
+fillRow($('#mq1'), QS.slice(0, 7));
+fillRow($('#mq2'), QS.slice(7).concat(QS.slice(0, 2)));
+if (reduce) $$('.mq-row').forEach(function (r) { r.style.animation = 'none'; });
+
+/* pointer tilt on the demo card and magnetic buttons (fine pointers only) */
+if (hasGsap && !reduce && matchMedia('(pointer: fine)').matches) {
+    var card = $('#demo');
+    card.addEventListener('pointermove', function (e) {
+        var r = card.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+        gsap.to(card, { rotationY: x * 7, rotationX: -y * 7, transformPerspective: 900, duration: .5, ease: 'power3.out' });
+    });
+    card.addEventListener('pointerleave', function () { gsap.to(card, { rotationY: 0, rotationX: 0, duration: .8, ease: 'power3.out' }); });
+    $$('.btn').forEach(function (b) {
+        b.addEventListener('pointermove', function (e) {
+            var r = b.getBoundingClientRect();
+            gsap.to(b, { x: (e.clientX - r.left - r.width / 2) * .18, y: (e.clientY - r.top - r.height / 2) * .28, duration: .35, ease: 'power3.out' });
+        });
+        b.addEventListener('pointerleave', function () { gsap.to(b, { x: 0, y: 0, duration: .6, ease: 'elastic.out(1,.5)' }); });
+    });
+}
+
+/* ---------- home motion ---------- */
+function countUp(el) {
+    var end = parseFloat(el.dataset.count), dec = +el.dataset.dec || 0, suf = el.dataset.suf || '';
+    var o = { v: 0 };
+    gsap.to(o, { v: end, duration: 1.6, ease: 'power3.out', onUpdate: function () { el.textContent = o.v.toFixed(dec) + suf; }, onComplete: function () { el.textContent = end.toFixed(dec) + suf; } });
+}
+
+if (hasGsap && !reduce) {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // hero: lines rise, then supporting parts follow
+    gsap.set('#heroTitle .line > span', { yPercent: 110 });
+    // opening curtain: the name rises, then the green panel lifts away
+    var cur = $('#curtain'), skipCurtain = location.hash === '#app';
+    if (skipCurtain) cur.style.display = 'none';
+    else gsap.timeline({ onComplete: function () { cur.style.display = 'none'; } })
+        .from('#curtainTxt', { yPercent: 120, duration: .8, ease: 'power4.out' })
+        .to('#curtainTxt', { yPercent: -120, duration: .5, ease: 'power3.in' }, '+=.2')
+        .to(cur, { yPercent: -100, duration: .9, ease: 'power4.inOut' }, '-=.15');
+    gsap.timeline({ defaults: { ease: 'power4.out' }, delay: skipCurtain ? .15 : 2 })
+        .to('#heroTitle .line > span', { yPercent: 0, duration: 1.1, stagger: .12 })
+        .to('.hero .rv', { opacity: 1, y: 0, duration: .9, stagger: .12 }, '-=.7')
+        .from('#uiFill', { scaleX: 0, duration: 1.4, ease: 'power3.out' }, '-=.6')
+        .add(function () { var o = { v: 0 }; gsap.to(o, { v: EX[0].s, duration: 1.4, ease: 'power3.out', onUpdate: function () { if (exI === 0) $('#dS').textContent = Math.round(o.v); } }); }, '-=1.4');
+
+    // headline words rise as each section arrives
+    $$('.field h2').forEach(function (h) {
+        h.classList.remove('rv');
+        h.innerHTML = h.textContent.split(' ').map(function (w) { return '<span class="w"><span>' + esc(w) + '</span></span>'; }).join(' ');
+        gsap.from($$('.w > span', h), { yPercent: 110, duration: 1, ease: 'power4.out', stagger: .06, scrollTrigger: { trigger: h, start: 'top 85%', once: true } });
+    });
+
+    // hero drifts up and fades as the dark section arrives
+    gsap.to('.hero-grid', { yPercent: -8, opacity: .15, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+
+    // lede paragraphs light up word by word as you scroll through them
+    $$('#evidence .lede, #explore .lede, #results .lede').forEach(function (p) {
+        p.classList.remove('rv');
+        p.innerHTML = p.textContent.split(' ').map(function (w) { return '<span class="lw">' + esc(w) + '</span>'; }).join(' ');
+        gsap.fromTo($$('.lw', p), { opacity: .18 }, { opacity: 1, ease: 'none', stagger: .08, scrollTrigger: { trigger: p, start: 'top 82%', end: 'bottom 52%', scrub: true } });
+    });
+
+    // comparison bars and benchmark gap bars grow into place
+    gsap.from('.cmp-fill', { scaleX: 0, duration: 1.4, ease: 'power3.out', stagger: .15, scrollTrigger: { trigger: '.cmp', start: 'top 85%', once: true } });
+    gsap.from('.gbar', { scaleX: 0, duration: 1.2, ease: 'power3.out', stagger: .15, scrollTrigger: { trigger: 'table', start: 'top 80%', once: true } });
+
+    // section reveals, staggered inside each section
+    $$('.field').forEach(function (sec) {
+        var items = $$('.rv', sec);
+        if (!items.length) return;
+        gsap.to(items, { opacity: 1, y: 0, duration: .9, ease: 'power3.out', stagger: .1, scrollTrigger: { trigger: sec, start: 'top 72%', once: true } });
+    });
+    $$('.stat b').forEach(function (b) {
+        b.textContent = '0';
+        ScrollTrigger.create({ trigger: b, start: 'top 90%', once: true, onEnter: function () { countUp(b); } });
+    });
+    // histogram bars grow when visible
+    gsap.from('.hbar', { scaleY: 0, duration: 1, ease: 'power3.out', stagger: .05, scrollTrigger: { trigger: '#hist', start: 'top 80%', once: true } });
+
+    // pinned "how it works" scene on desktop, plain stack otherwise
+    var mm = gsap.matchMedia();
+    mm.add('(min-width: 961px)', function () {
+        var steps = $$('.step'), stages = $$('.stage');
+        gsap.set(stages.slice(1), { autoAlpha: 0, y: 40 });
+        gsap.set(steps.slice(1), { opacity: .28 });
+        gsap.set('#howVisual .ans', { y: 0 });
+        var big = { v: 0 }, bigEl = $('#scBig');
+        bigEl.textContent = '0';
+        var tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: '#howGrid', start: 'top 18%', end: '+=2200', scrub: .6, pin: true, anticipatePin: 1 } });
+        tl.from('#howVisual .stage[data-stage="0"] .ans', { autoAlpha: 0, y: 40, stagger: .2, duration: .6 })
+          .to({}, { duration: .5 })
+          .to(stages[0], { autoAlpha: 0, y: -40, duration: .5 })
+          .to(steps[0], { opacity: .28, duration: .3 }, '<')
+          .to(steps[1], { opacity: 1, duration: .3 }, '<')
+          .to(stages[1], { autoAlpha: 1, y: 0, duration: .5 }, '<')
+          .from('#howVisual .vtable > div:not(.vh)', { autoAlpha: 0, scale: .9, stagger: .04, duration: .3 })
+          .to({}, { duration: .5 })
+          .to(stages[1], { autoAlpha: 0, y: -40, duration: .5 })
+          .to(steps[1], { opacity: .28, duration: .3 }, '<')
+          .to(steps[2], { opacity: 1, duration: .3 }, '<')
+          .to(stages[2], { autoAlpha: 1, y: 0, duration: .5 }, '<')
+          .to(big, { v: 100, duration: 1, onUpdate: function () { bigEl.textContent = Math.round(big.v); } })
+          .from('.sc-parts div', { autoAlpha: 0, y: 20, stagger: .15, duration: .4 }, '<')
+          .to({}, { duration: .6 });
+        tl.to('.pbar i', { scaleX: 1, duration: tl.duration(), ease: 'none' }, 0);
+        return function () { gsap.set(steps.concat(stages), { clearProps: 'all' }); };
+    });
+    mm.add('(max-width: 960px)', function () {
+        $$('.step').forEach(function (s) { gsap.set(s, { opacity: 1 }); });
+    });
+
+    // histogram thumb feedback
+    $('#thr').addEventListener('pointerdown', function () { gsap.to('#hist', { scale: 1.01, duration: .3, ease: 'power2.out' }); });
+    addEventListener('pointerup', function () { gsap.to('#hist', { scale: 1, duration: .4, ease: 'power2.out' }); });
+} else {
+    document.documentElement.classList.remove('js');
+    $$('.stat b').forEach(function (b) { b.textContent = (+b.dataset.count).toFixed(+b.dataset.dec || 0) + (b.dataset.suf || ''); });
+}
+
+/* ---------- app ---------- */
+var POOLS = [
+    { cat: 'Geography and facts', qs: ['What is the capital of Japan?', 'What is the largest ocean on Earth?', 'What is the smallest country in the world?', 'What is the capital of Australia?', 'Which planet is closest to the Sun?', 'What is the currency of Brazil?'] },
+    { cat: 'Science', qs: ['What causes tides on Earth?', 'Why is the sky blue?', 'How does photosynthesis work?', 'How many eyes does a spider have?', 'What is DNA made of?', 'How do vaccines work?'] },
+    { cat: 'History', qs: ['When did World War II end?', 'Who invented the telephone?', 'When did the Berlin Wall fall?', 'Who discovered penicillin?', 'When did the Titanic sink?', 'Who was the first president of the United States?'] }
+];
+function randomizeChips() {
+    var box = $('#chips');
+    box.innerHTML = '';
+    POOLS.forEach(function (p) {
+        var q = p.qs[Math.floor(Math.random() * p.qs.length)];
+        var b = document.createElement('button');
+        b.className = 'chip';
+        b.innerHTML = '<small>' + esc(p.cat) + '</small><span>' + esc(q) + '</span>';
+        b.addEventListener('click', function () { $('#q').value = q; $('#q').focus(); });
+        box.appendChild(b);
+    });
+}
+
+var JUDGE_NAMES = { groq: 'Qwen3 27B', cohere: 'Cohere Command A', llama: 'gpt-oss 120B', gemini: 'Gemini', mistral: 'Mistral', openai: 'GPT' };
+function judgeName(p) { return JUDGE_NAMES[p] || p; }
+var history_ = [];
+
+function showError(msg) {
+    var e = $('#err'), q = $('#q');
+    e.textContent = msg; e.classList.toggle('on', !!msg);
+    if (msg) { q.setAttribute('aria-invalid', 'true'); q.setAttribute('aria-describedby', 'err'); }
+    else { q.removeAttribute('aria-invalid'); q.removeAttribute('aria-describedby'); }
+}
+
+var loadTimer = null;
+function setLoading(on) {
+    var steps = ['Generating three answers', 'Asking three judges', 'Checking agreement', 'Scoring'], i = 0;
+    $('#loading').classList.toggle('on', on);
+    $('#goBtn').disabled = on;
+    clearInterval(loadTimer);
+    if (on) { $('#loadMsg').textContent = steps[0]; loadTimer = setInterval(function () { i = Math.min(i + 1, steps.length - 1); $('#loadMsg').textContent = steps[i]; }, 2600); }
+}
+
+window.submitQuestion = function () {
+    var q = $('#q').value.trim();
+    showError('');
+    if (!q) { showError('Type a question first.'); $('#q').focus(); return; }
+    setLoading(true);
+    fetch('/api/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) })
+        .then(function (r) { if (!r.ok) throw new Error('The server returned ' + r.status + '.'); return r.json(); })
+        .then(function (data) { setLoading(false); render(data, q, false); })
+        .catch(function (err) { setLoading(false); showError('Could not verify that question. ' + (err.message || 'Check your connection and try again.')); });
+};
+$('#q').addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitQuestion(); });
+
+function tier(score) {
+    if (score >= 80) return { c: 'hi', t: 'High confidence' };
+    if (score >= 75) return { c: 'mid', t: 'Medium confidence' };
+    return { c: 'lo', t: 'Low confidence' };
+}
+
+function render(data, q, fromHistory) {
+    var score = +data.trust_score || 0, t = tier(score);
+    if (!fromHistory) {
+        history_.unshift({ q: q, score: score, data: data });
+        history_.length = Math.min(history_.length, 10);
+        renderHistory();
+    }
+    var per = data.per_answer || [];
+    var tabs = '<div class="tabs" role="tablist">', panels = '';
+    per.forEach(function (a, i) {
+        tabs += '<button class="tab' + (i === 0 ? ' active' : '') + '" role="tab" data-i="' + i + '">Answer ' + (i + 1) + '</button>';
+        var chips = '', ok = 0, resp = 0;
+        (a.judges || []).forEach(function (j) {
+            var n = esc(judgeName(j.provider));
+            if (j.failed) chips += '<span class="jc er">' + n + ' · no response</span>';
+            else { resp++; if (j.correct) { ok++; chips += '<span class="jc ok">' + n + ' · correct</span>'; } else chips += '<span class="jc no">' + n + ' · wrong</span>'; }
+        });
+        panels += '<div class="panel' + (i === 0 ? ' active' : '') + '" data-p="' + i + '"><p class="at">' + esc(a.answer) + '</p><div class="jchips">' + chips + '</div><p class="meta">Score ' + (a.score * 100).toFixed(1) + '% · ' + ok + ' of ' + resp + ' judges agree · matches ' + Math.round(a.consistency_fraction * 100) + '% of the other answers</p></div>';
+    });
+    tabs += '</div>';
+    var matrix = '';
+    if (per.length) {
+        var js = per[0].judges || [];
+        matrix = '<div class="matrix" style="--cols:' + js.length + '" role="table" aria-label="Judge votes for each answer"><div class="mrow mh" role="row"><div role="columnheader"></div>' +
+            js.map(function (j) { return '<div role="columnheader">' + esc(judgeName(j.provider)) + '</div>'; }).join('') + '<div role="columnheader" style="justify-content:flex-end">Score</div></div>';
+        per.forEach(function (a, i) {
+            matrix += '<div class="mrow" role="row"><div role="rowheader">Answer ' + (i + 1) + '</div>' +
+                (a.judges || []).map(function (j) {
+                    return j.failed ? '<div class="c-er" role="cell">No reply</div>' : (j.correct ? '<div class="c-ok" role="cell">Correct</div>' : '<div class="c-no" role="cell">Wrong</div>');
+                }).join('') + '<div class="sc2" role="cell">' + Math.round(a.score * 100) + '</div></div>';
+        });
+        matrix += '</div>';
+    }
+    var box = $('#results2');
+    box.innerHTML =
+        '<div class="r-answer"><small>Verified answer</small><p>' + esc(data.winner_answer) + '</p></div>' +
+        '<div class="r-score"><div><small>Trust score</small><div class="r-num ' + t.c + '">' + score + '</div></div>' +
+        '<div><div class="verdict">' + t.t + '</div><div class="meter"><i class="' + t.c + '" style="width:' + Math.min(score, 100) + '%"></i></div><p class="why">' + esc(data.reasoning) + '</p></div></div>' +
+        (per.length ? '<h2 class="jh">How each judge voted</h2>' + matrix + '<h3 class="jh" style="font-size:20px;margin-top:36px">Read each answer</h3>' + tabs + panels : '') +
+        '<div class="submit" style="margin-top:40px"><button class="btn ghost" id="again">Ask another question</button></div>';
+    box.classList.add('on');
+    $$('.tab', box).forEach(function (b) {
+        b.addEventListener('click', function () {
+            $$('.tab', box).forEach(function (x) { x.classList.toggle('active', x === b); });
+            $$('.panel', box).forEach(function (p) { p.classList.toggle('active', p.dataset.p === b.dataset.i); });
+        });
+    });
+    $('#again', box).addEventListener('click', function () { box.classList.remove('on'); box.innerHTML = ''; $('#q').value = ''; randomizeChips(); scrollToTop(); $('#q').focus({ preventScroll: true }); });
+    if (hasGsap && !reduce) {
+        gsap.from(box.children, { opacity: 0, y: 28, duration: .7, stagger: .12, ease: 'power3.out' });
+        gsap.from('.meter i', { scaleX: 0, duration: 1.2, ease: 'power3.out', delay: .3 });
+        var n = { v: 0 }, el = $('.r-num', box);
+        gsap.to(n, { v: score, duration: 1.2, ease: 'power3.out', delay: .2, onUpdate: function () { el.textContent = Math.round(n.v); }, onComplete: function () { el.textContent = score; } });
+    }
+    var top = box.getBoundingClientRect().top + scrollY - 96;
+    if (lenis) lenis.scrollTo(top, { duration: 1 }); else scrollTo({ top: top, behavior: 'smooth' });
+}
+
+function renderHistory() {
+    var el = $('#histList');
+    if (!history_.length) { el.innerHTML = '<p class="empty">Questions you verify will appear here.</p>'; return; }
+    el.innerHTML = '';
+    history_.forEach(function (h) {
+        var b = document.createElement('button');
+        b.className = 'hrow';
+        b.innerHTML = '<span>' + esc(h.q) + '</span><b>' + h.score + '</b>';
+        b.addEventListener('click', function () { $('#q').value = h.q; render(h.data, h.q, true); });
+        el.appendChild(b);
+    });
+    var c = document.createElement('button');
+    c.className = 'clear'; c.textContent = 'Clear history';
+    c.addEventListener('click', function () { history_ = []; renderHistory(); });
+    el.appendChild(c);
+}
+
+if (location.hash === '#app') go('app');
+onScroll();
+})();
+</script>
+</body>
+</html>
