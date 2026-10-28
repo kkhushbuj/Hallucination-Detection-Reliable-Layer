@@ -19,7 +19,7 @@ async def serve_home():
 
 
 @app.post("/api/verify")
-async def verify_question(req: QuestionRequest):
+def verify_question(req: QuestionRequest):
     trust_graph = build_graph()
     result = trust_graph.invoke({"question": req.question})
     return result["verification_result"]

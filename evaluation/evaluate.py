@@ -21,15 +21,14 @@ BATCH_SIZE = 50
 NUM_BATCHES = 4
 FIELDNAMES = ["question", "source", "model_answer", "best_answer", "trust_score", "label", "flagged_count", "majority_flagged", "correct"]
 
-# Models used to independently check correctness against the benchmark answer. A majority
-# vote (2-of-3) is taken as the final label, and 2-1 splits are tracked as a disagreement.
+# Grader that decides whether an answer matches the benchmark's reference answer. It is a lab
+# that plays no role in the scoring pipeline, so it cannot favour its own verdicts. With more
+# than one entry the label is a majority vote and split votes are tracked as disagreements.
 GROUND_TRUTH_CHECKERS = [
-    {"provider": "groq", "model": "qwen/qwen3.8-27b"},
-    {"provider": "gemini", "model": "gemini-3.5-flash"},
-    {"provider": "mistral", "model": "mistral-small-latest"},
+    {"provider": "openrouter_grader", "model": "anthropic/claude-haiku-5.5"},
 ]
 
-# Running counts of how often the 3 correctness-checkers disagreed (2-1 split), reset per run.
+# Running counts of how often multiple correctness-checkers split their vote, reset per run.
 checker_disagreement_count = 0
 checker_total_count = 0
 
@@ -163,7 +162,7 @@ def _check_correctness_once(question: str, model_answer: str, best_answer: str, 
 
 
 def is_correct(question: str, model_answer: str, best_answer: str) -> bool:
-    """Majority vote (2-of-3) across independent checker models. Tracks 2-1 disagreement splits."""
+    """Majority vote across the grader model(s). Tracks split votes when there are three."""
     global checker_disagreement_count, checker_total_count
 
     votes = []
@@ -310,7 +309,7 @@ def summarize(results, out_path="evaluation/results_final.csv", title="EVALUATIO
     if checker_total_count > 0:
         disagreement_rate = checker_disagreement_count / checker_total_count * 100
         print(
-            f"\nGround-truth checker disagreement (2-1 splits): "
+            f"\nGround-truth checker disagreement (split votes): "
             f"{checker_disagreement_count}/{checker_total_count} ({disagreement_rate:.1f}%)"
         )
 
@@ -405,7 +404,7 @@ def merge_batches():
     if missing:
         print(f"WARNING: missing batch(es) {missing} - merge will be incomplete ({len(all_results)}/200 questions).")
 
-    summarize(all_results, out_path="evaluation/results_final.csv", title=f"MERGED FINAL SUMMARY (Full {len(all_results)}, Groq GPT-OSS-20B correctness-checker)")
+    summarize(all_results, out_path="evaluation/results_final.csv", title=f"MERGED FINAL SUMMARY (Full {len(all_results)})")
 
 
 if __name__ == "__main__":
@@ -425,4 +424,4 @@ if __name__ == "__main__":
         # Fallback: run the full 200 in one go (original behavior).
         dataset = load_combined_dataset(total=200)
         results = run_evaluation(dataset)
-        summarize(results, out_path="evaluation/results_final.csv", title="EVALUATION SUMMARY (Full 200, Groq GPT-OSS-20B correctness-checker)")
+        summarize(results, out_path="evaluation/results_final.csv", title="EVALUATION SUMMARY (Full 200)")
