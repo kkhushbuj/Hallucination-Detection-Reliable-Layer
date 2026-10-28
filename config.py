@@ -3,30 +3,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-COHERE_API_KEY = os.getenv("COHERE_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
-# Llama 3.3 70B is no longer served by Groq (decommissioned), so this runs it via
-# OpenRouter instead - a different lab from the OpenAI generator, on its own key.
-TIE_BREAKER_MODEL = {"provider": "openrouter", "model": "meta-llama/llama-3.3-70b-instruct"}
-TIE_BREAKER_PENALTY = 10
+# Each job is done by a model from a different lab. Provider names map to an API key in
+# models/llm_providers.py (the three OpenRouter providers each use their own key).
 
+# Writes the 3 candidate answers (OpenAI).
+CONSISTENCY_MODEL = {"provider": "openai", "model": "gpt-4o-mini"}
+
+# The 3 judges: Alibaba Qwen, Mistral and Meta Llama.
 VOTING_MODELS = [
     {"provider": "groq", "model": "qwen/qwen3.8-27b"},
-    {"provider": "gemini", "model": "gemini-3.5-flash"},
-    {"provider": "cohere", "model": "command-r-08-2024"},
+    {"provider": "openrouter_mistral", "model": "mistralai/mistral-medium-3-5"},
+    {"provider": "openrouter_llama", "model": "meta-llama/llama-3.3-70b-instruct"},
 ]
 
-CONSISTENCY_MODEL = {"provider": "openai", "model": "gpt-4o-mini"}
-CONSISTENCY_RUNS = 4
+# Decides whether two generated answers reach the same conclusion (Google Gemma).
+AGREEMENT_MODEL = {"provider": "openrouter_checker", "model": "google/gemma-4-31b-it"}
+
+# Independent second opinion on the winning answer (NVIDIA Nemotron).
+TIE_BREAKER_MODEL = {"provider": "nvidia", "model": "nvidia/nemotron-3.5-lightning-30b-a3b"}
+TIE_BREAKER_PENALTY = 10
+
 CONSISTENCY_TEMPERATURE = 0.9
 
 TEMPERATURES = [0.9, 0.9, 0.9]

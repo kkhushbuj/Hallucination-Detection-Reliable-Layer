@@ -1,11 +1,9 @@
-import os
+"""Self-consistency: do the model's repeated answers reach the same conclusion?"""
+
 import math
-from dotenv import load_dotenv
-from groq import Groq
 
-load_dotenv()
-
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+import config
+from models.llm_providers import call_model
 
 
 def check_entailment(answer_a: str, answer_b: str) -> bool:
@@ -22,15 +20,13 @@ def check_entailment(answer_a: str, answer_b: str) -> bool:
         "Respond with ONLY the single word YES or the single word NO. "
         "Do not include any explanation or other text."
     )
-    response = client.chat.completions.create(
-        model="qwen/qwen3.8-27b",
-        max_tokens=300,
-        messages=[{"role": "user", "content": prompt}],
+    reply = call_model(
+        provider=config.AGREEMENT_MODEL["provider"],
+        model=config.AGREEMENT_MODEL["model"],
+        question=prompt,
         temperature=0,
-        reasoning_effort="low",
     )
-    result_text = response.choices[0].message.content.strip().upper()
-    return "YES" in result_text
+    return reply.strip().upper().startswith("YES")
 
 
 def cluster_answers(answers: list[str]) -> list[list[int]]:
