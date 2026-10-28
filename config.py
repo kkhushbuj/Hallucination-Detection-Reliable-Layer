@@ -9,7 +9,7 @@ USE_WEB_SEARCH = True
 USE_TIE_BREAKER = True
 
 # Each job is done by a model from a different lab. Provider names map to an API key in
-# models/llm_providers.py (the three OpenRouter providers each use their own key).
+# models/llm_providers.py (the OpenRouter providers each use their own key).
 
 # Writes the 3 candidate answers (OpenAI).
 CONSISTENCY_MODEL = {"provider": "openai", "model": "gpt-4o-mini"}
@@ -21,8 +21,8 @@ VOTING_MODELS = [
     {"provider": "openrouter_llama", "model": "meta-llama/llama-3.3-70b-instruct"},
 ]
 
-# Decides whether two generated answers reach the same conclusion (Google Gemma).
-AGREEMENT_MODEL = {"provider": "openrouter_checker", "model": "google/gemma-4-31b-it"}
+# Decides whether two generated answers reach the same conclusion (Google Gemini).
+AGREEMENT_MODEL = {"provider": "gemini", "model": "gemini-3.5-flash-lite"}
 
 # Independent second opinion on the winning answer (NVIDIA Nemotron).
 TIE_BREAKER_MODEL = {"provider": "nvidia", "model": "nvidia/nemotron-3.5-lightning-30b-a3b"}

@@ -18,6 +18,7 @@ SYSTEM_INSTRUCTION = (
 )
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 # OpenRouter reserves credit for the largest possible reply when no limit is set, which fails
 # on small balances. Every OpenRouter role here returns a short verdict, so cap it.
@@ -29,7 +30,7 @@ OPENAI_COMPATIBLE = {
     "openai": (None, "OPENAI_API_KEY", {}),
     "openrouter_mistral": (OPENROUTER_URL, "OPENROUTER_MISTRAL_API_KEY", OPENROUTER_ARGS),
     "openrouter_llama": (OPENROUTER_URL, "OPENROUTER_API_KEY", OPENROUTER_ARGS),
-    "openrouter_checker": (OPENROUTER_URL, "OPENROUTER_CHECKER_API_KEY", OPENROUTER_ARGS),
+    "gemini": (GEMINI_URL, "GEMINI_API_KEY", {"max_tokens": 512}),
     "openrouter_grader": (OPENROUTER_URL, "OPENROUTER_GRADER_API_KEY", OPENROUTER_ARGS),
     # Nemotron reasons before it answers, so it needs room beyond the one-word verdict.
     "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY", {"max_tokens": 2048}),
