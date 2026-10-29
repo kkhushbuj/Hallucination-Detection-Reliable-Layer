@@ -19,6 +19,8 @@ import config
 
 BATCH_SIZE = 50
 NUM_BATCHES = 4
+BASELINE_SEED = 42
+SEED = BASELINE_SEED  # --seed switches to a different 200 questions; results get their own file names
 FIELDNAMES = ["question", "source", "model_answer", "best_answer", "trust_score", "label", "flagged_count", "majority_flagged", "correct"]
 
 # Grader that decides whether an answer matches the benchmark's reference answer. It is a lab
@@ -33,7 +35,7 @@ checker_disagreement_count = 0
 checker_total_count = 0
 
 
-def load_truthfulqa(path="evaluation/datasets/truthfulqa_full.csv", n=67, seed=42):
+def load_truthfulqa(path="evaluation/datasets/truthfulqa_full.csv", n=67, seed=42, exclude=frozenset()):
     rows = []
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -43,11 +45,12 @@ def load_truthfulqa(path="evaluation/datasets/truthfulqa_full.csv", n=67, seed=4
                 "best_answer": row["Best Answer"],
                 "source": "TruthfulQA",
             })
+    rows = [r for r in rows if r["question"] not in exclude]
     random.seed(seed)
     return random.sample(rows, min(n, len(rows)))
 
 
-def load_halueval(path="evaluation/datasets/halueval_qa.json", n=67, seed=42):
+def load_halueval(path="evaluation/datasets/halueval_qa.json", n=67, seed=42, exclude=frozenset()):
     rows = []
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -60,11 +63,48 @@ def load_halueval(path="evaluation/datasets/halueval_qa.json", n=67, seed=42):
                 "best_answer": item["right_answer"],
                 "source": "HaluEval",
             })
+    rows = [r for r in rows if r["question"] not in exclude]
     random.seed(seed)
     return random.sample(rows, min(n, len(rows)))
 
 
-def load_triviaqa(n=66, seed=42, max_retries=4, cache_path="evaluation/datasets/triviaqa_cache.json"):
+def _extend_triviaqa_cache(rows, extra, extra_path, want, max_retries=4):
+    """Page further into the TriviaQA validation split until `want` unseen rows are cached.
+
+    `rows` is the original cache plus `extra`, the rows already fetched. New rows go in their own
+    file so the original cache, and with it the baseline sample, never changes.
+    """
+    seen = {r["question"] for r in rows}
+    offset = len(rows)
+    extra = list(extra)
+    while want > 0:
+        params = {"dataset": "mandarjoshi/trivia_qa", "config": "rc.nocontext", "split": "validation", "offset": offset, "length": 100}
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.get("https://datasets-server.huggingface.co/rows", params=params, timeout=30)
+                response.raise_for_status()
+                page = response.json().get("rows", [])
+                break
+            except (requests.exceptions.RequestException, ValueError):
+                time.sleep(2 ** attempt)
+        else:
+            raise RuntimeError("Failed to extend the TriviaQA cache")
+        if not page:
+            break
+        for item in page:
+            row = item["row"]
+            question, answer = row.get("question"), row.get("answer", {}).get("value")
+            if question and answer and question not in seen:
+                seen.add(question)
+                extra.append({"question": question, "best_answer": answer, "source": "TriviaQA"})
+                want -= 1
+        offset += len(page)
+    with open(extra_path, "w", encoding="utf-8") as f:
+        json.dump(extra, f)
+    return extra
+
+
+def load_triviaqa(n=66, seed=42, max_retries=4, cache_path="evaluation/datasets/triviaqa_cache.json", exclude=frozenset()):
     if os.path.exists(cache_path):
         with open(cache_path, encoding="utf-8") as f:
             rows = json.load(f)
@@ -109,16 +149,29 @@ def load_triviaqa(n=66, seed=42, max_retries=4, cache_path="evaluation/datasets/
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(rows, f)
 
+    if exclude:
+        extra_path = cache_path.replace(".json", "_extra.json")
+        extra = []
+        if os.path.exists(extra_path):
+            with open(extra_path, encoding="utf-8") as f:
+                extra = json.load(f)
+        unused = [r for r in rows + extra if r["question"] not in exclude]
+        if len(unused) < n + 50:
+            extra = _extend_triviaqa_cache(rows + extra, extra, extra_path, want=n + 50 - len(unused))
+        rows = rows + extra
+    unused = [r for r in rows if r["question"] not in exclude]
     random.seed(seed)
-    return random.sample(rows, min(n, len(rows)))
+    return random.sample(unused, min(n, len(unused)))
 
 
 def load_combined_dataset(total=200, seed=42):
     """Deterministic full 200-question set (same seed -> same 200, same order, every run)."""
     per_source = total // 3
-    truthfulqa = load_truthfulqa(n=per_source, seed=seed)
-    halueval = load_halueval(n=per_source, seed=seed)
-    triviaqa = load_triviaqa(n=total - len(truthfulqa) - len(halueval), seed=seed)
+    # A non-baseline seed must not reuse any baseline question, or the before/after is not fair.
+    exclude = set() if seed == BASELINE_SEED else {r["question"] for r in load_combined_dataset(total, BASELINE_SEED)}
+    truthfulqa = load_truthfulqa(n=per_source, seed=seed, exclude=exclude)
+    halueval = load_halueval(n=per_source, seed=seed, exclude=exclude)
+    triviaqa = load_triviaqa(n=total - len(truthfulqa) - len(halueval), seed=seed, exclude=exclude)
 
     combined = truthfulqa + halueval + triviaqa
     random.seed(seed)
@@ -126,9 +179,19 @@ def load_combined_dataset(total=200, seed=42):
     return combined
 
 
+def batch_path(batch_num: int) -> str:
+    tag = "" if SEED == BASELINE_SEED else f"_seed{SEED}"
+    return f"evaluation/results{tag}_batch{batch_num}.csv"
+
+
+def final_path() -> str:
+    tag = "" if SEED == BASELINE_SEED else f"_seed{SEED}"
+    return f"evaluation/results{tag}_final.csv"
+
+
 def get_batch(batch_num: int, batch_size: int = BATCH_SIZE):
     """Slice out one 50-question batch (1-indexed) from the full deterministic 200-question set."""
-    dataset = load_combined_dataset(total=200)
+    dataset = load_combined_dataset(total=200, seed=SEED)
     start = (batch_num - 1) * batch_size
     end = start + batch_size
     return dataset[start:end], start
@@ -274,7 +337,8 @@ def load_csv(path):
         return rows
 
 
-def summarize(results, out_path="evaluation/results_final.csv", title="EVALUATION SUMMARY"):
+def summarize(results, out_path=None, title="EVALUATION SUMMARY"):
+    out_path = out_path or final_path()
     valid = [r for r in results if r["trust_score"] is not None]
     total = len(valid)
 
@@ -321,7 +385,7 @@ def run_batch(batch_num: int):
     dataset, offset = get_batch(batch_num)
     print(f"=== Batch {batch_num}/{NUM_BATCHES} ({len(dataset)} questions) ===\n")
     results = run_evaluation(dataset, global_offset=offset, total_overall=200)
-    out_path = f"evaluation/results_batch{batch_num}.csv"
+    out_path = batch_path(batch_num)
     summarize(results, out_path=out_path, title=f"BATCH {batch_num} SUMMARY (questions {offset + 1}-{offset + len(dataset)})")
 
 
@@ -356,7 +420,7 @@ def run_backfill():
     total_still_failing = 0
 
     for b in range(1, NUM_BATCHES + 1):
-        path = f"evaluation/results_batch{b}.csv"
+        path = batch_path(b)
         if not os.path.exists(path):
             print(f"Batch {b}: no CSV, skipping.")
             continue
@@ -395,7 +459,7 @@ def merge_batches():
     all_results = []
     missing = []
     for b in range(1, NUM_BATCHES + 1):
-        path = f"evaluation/results_batch{b}.csv"
+        path = batch_path(b)
         if os.path.exists(path):
             all_results.extend(load_csv(path))
         else:
@@ -404,15 +468,17 @@ def merge_batches():
     if missing:
         print(f"WARNING: missing batch(es) {missing} - merge will be incomplete ({len(all_results)}/200 questions).")
 
-    summarize(all_results, out_path="evaluation/results_final.csv", title=f"MERGED FINAL SUMMARY (Full {len(all_results)})")
+    summarize(all_results, out_path=None, title=f"MERGED FINAL SUMMARY (Full {len(all_results)})")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the 200-question evaluation in 50-question batches, or merge completed batches.")
     parser.add_argument("--batch", type=int, choices=range(1, NUM_BATCHES + 1), help="Run one 50-question batch (1-4).")
+    parser.add_argument("--seed", type=int, default=BASELINE_SEED, help="Question-sampling seed. The default reproduces the baseline 200; any other seed draws a fresh 200 with its own result files.")
     parser.add_argument("--merge", action="store_true", help="Merge all completed result_batch*.csv files into the final summary.")
     parser.add_argument("--backfill", action="store_true", help="Re-run only the failed rows across all batch CSVs, then merge.")
     args = parser.parse_args()
+    SEED = args.seed
 
     if args.backfill:
         run_backfill()
@@ -422,6 +488,6 @@ if __name__ == "__main__":
         run_batch(args.batch)
     else:
         # Fallback: run the full 200 in one go (original behavior).
-        dataset = load_combined_dataset(total=200)
+        dataset = load_combined_dataset(total=200, seed=SEED)
         results = run_evaluation(dataset)
-        summarize(results, out_path="evaluation/results_final.csv", title="EVALUATION SUMMARY (Full 200)")
+        summarize(results, out_path=None, title="EVALUATION SUMMARY (Full 200)")
