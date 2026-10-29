@@ -404,7 +404,7 @@ textarea:focus { outline: none; border-color: var(--green); }
                 <button class="btn" type="submit">Verify <span class="arr">→</span></button>
             </form>
             <div class="hero-actions rv"><a class="btn ghost" href="#how">See how it works</a></div>
-            <p class="proof rv">Tested on 197 questions from TruthfulQA, HaluEval and TriviaQA. <a href="#results">See where it fails</a></p>
+            <p class="proof rv">Tested on 200 questions from TruthfulQA, HaluEval and TriviaQA. <a href="#results">See where it fails</a></p>
         </div>
         <div data-ui class="on-ink rv" id="demo" role="group" aria-label="Real examples from the evaluation set">
             <div class="ui-top"><span id="dSrc">TriviaQA</span><span class="dots"><i></i><i></i><i></i></span></div>
@@ -430,16 +430,16 @@ textarea:focus { outline: none; border-color: var(--green); }
 <section class="field ink on-ink" id="evidence">
     <div class="wrap">
         <h2 class="rv">Right answers score higher than wrong ones.</h2>
-        <p class="lede rv">Across 197 scored questions, answers that were actually correct averaged 12.8 points more than answers that were wrong. The gap is widest on trivia questions.</p>
+        <p class="lede rv">Across 200 scored questions, answers that were actually correct averaged 18.1 points more than answers that were wrong. The gap is widest on trivia questions.</p>
         <div class="stats">
-            <div class="stat rv"><b data-count="82.6" data-dec="1" data-suf="%">82.6%</b><p>average score when the answer was correct</p></div>
-            <div class="stat rv"><b data-count="69.8" data-dec="1" data-suf="%">69.8%</b><p>average score when the answer was wrong</p></div>
-            <div class="stat rv"><b data-count="12.8" data-dec="1">12.8</b><p>points of average gap between the two</p></div>
-            <div class="stat rv"><b data-count="197">197</b><p>questions from TruthfulQA, HaluEval and TriviaQA</p></div>
+            <div class="stat rv"><b data-count="93.1" data-dec="1" data-suf="%">93.1%</b><p>average score when the answer was correct</p></div>
+            <div class="stat rv"><b data-count="74.9" data-dec="1" data-suf="%">74.9%</b><p>average score when the answer was wrong</p></div>
+            <div class="stat rv"><b data-count="18.1" data-dec="1">18.1</b><p>points of average gap between the two</p></div>
+            <div class="stat rv"><b data-count="200">200</b><p>questions from TruthfulQA, HaluEval and TriviaQA</p></div>
         </div>
-        <div class="cmp rv" role="img" aria-label="Average trust score: 82.6 for correct answers, 69.8 for wrong answers">
-            <div class="cmp-row"><span>Correct answers</span><div class="cmp-track"><i class="cmp-fill" style="--w:82.6%"></i></div><b>82.6</b></div>
-            <div class="cmp-row"><span>Wrong answers</span><div class="cmp-track"><i class="cmp-fill bad" style="--w:69.8%"></i></div><b>69.8</b></div>
+        <div class="cmp rv" role="img" aria-label="Average trust score: 93.1 for correct answers, 74.9 for wrong answers">
+            <div class="cmp-row"><span>Correct answers</span><div class="cmp-track"><i class="cmp-fill" style="--w:93.1%"></i></div><b>93.1</b></div>
+            <div class="cmp-row"><span>Wrong answers</span><div class="cmp-track"><i class="cmp-fill bad" style="--w:74.9%"></i></div><b>74.9</b></div>
         </div>
     </div>
 </section>
@@ -494,7 +494,7 @@ textarea:focus { outline: none; border-color: var(--green); }
 <section class="field ink on-ink" id="explore">
     <div class="wrap">
         <h2 class="rv">Set your own bar for what to distrust.</h2>
-        <p class="lede rv">Every bar below is real: the 197 scored answers from the evaluation, grouped by the trust score they received. Drag the slider to flag everything under a threshold and see what you would catch.</p>
+        <p class="lede rv">Every bar below is real: the 200 scored answers from the evaluation, grouped by the trust score they received. Drag the slider to flag everything under a threshold and see what you would catch.</p>
         <div class="explorer">
             <div class="rv">
                 <div class="hist" id="hist"></div>
@@ -505,7 +505,7 @@ textarea:focus { outline: none; border-color: var(--green); }
                 <label for="thr">Flag answers scoring below<b id="thrVal">75</b></label>
                 <input type="range" id="thr" min="0" max="100" step="1" value="75">
                 <div class="readout">
-                    <div><b id="oFlag">0</b><span id="oFlagT">answers flagged out of 197</span></div>
+                    <div><b id="oFlag">0</b><span id="oFlagT">answers flagged out of 200</span></div>
                     <div><b id="oPrec">0%</b><span>of the flagged answers really were wrong</span></div>
                     <div><b id="oRec">0%</b><span>of all wrong answers were caught</span></div>
                 </div>
@@ -517,13 +517,13 @@ textarea:focus { outline: none; border-color: var(--green); }
 <section class="field alt" id="results">
     <div class="wrap">
         <h2 class="rv">Where it works, and where it does not.</h2>
-        <p class="lede rv">Average trust score by benchmark. The score separates right from wrong well on trivia and hallucination questions, and not at all on TruthfulQA.</p>
+        <p class="lede rv">Average trust score by benchmark. The score separates right from wrong best on trivia and hallucination questions, and least on TruthfulQA.</p>
         <table class="rv">
             <thead><tr><th>Benchmark</th><th>What it tests</th><th>Questions</th><th>Gap, correct minus wrong</th></tr></thead>
             <tbody>
-                <tr><td>TriviaQA</td><td>General knowledge</td><td>68</td><td class="gap strong">+31.6 pts<i class="gbar" style="--w:90%"></i></td></tr>
-                <tr><td>HaluEval</td><td>Hallucination detection</td><td>64</td><td class="gap strong">+16.9 pts<i class="gbar" style="--w:48%"></i></td></tr>
-                <tr><td>TruthfulQA</td><td>Common misconceptions</td><td>65</td><td class="gap weak">−2.1 pts<i class="gbar" style="--w:6%"></i></td></tr>
+                <tr><td>TriviaQA</td><td>General knowledge</td><td>68</td><td class="gap strong">+24.9 pts<i class="gbar" style="--w:90%"></i></td></tr>
+                <tr><td>HaluEval</td><td>Hallucination detection</td><td>66</td><td class="gap strong">+17.3 pts<i class="gbar" style="--w:62%"></i></td></tr>
+                <tr><td>TruthfulQA</td><td>Common misconceptions</td><td>66</td><td class="gap weak">+9.3 pts<i class="gbar" style="--w:34%"></i></td></tr>
             </tbody>
         </table>
         <div class="miss rv">
@@ -533,7 +533,7 @@ textarea:focus { outline: none; border-color: var(--green); }
                 <p>The model answered with the Tooth Fairy and every judge accepted it. The correct answer is a child's parents or guardians. A high score means the judges agree, not that the answer is true.</p>
             </div>
         </div>
-        <p class="caveat rv"><strong>Why TruthfulQA fails:</strong> its questions are built around myths that models repeat. When every judge believes the same myth, they agree with each other and the score stays high. Three runs where no model responded are left out.</p>
+        <p class="caveat rv"><strong>Why TruthfulQA is weakest:</strong> its questions are built around myths that models repeat. When every judge believes the same myth, they agree with each other and the score stays high.</p>
     </div>
 </section>
 
@@ -607,7 +607,7 @@ textarea:focus { outline: none; border-color: var(--green); }
 'use strict';
 
 /* ---------- real evaluation data: [trust score, answer was correct] ---------- */
-var DATA = [[50.0,1],[75.0,1],[66.7,0],[100.0,1],[75.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[66.7,1],[100.0,1],[100.0,1],[100.0,0],[83.3,1],[100.0,1],[75.0,1],[100.0,0],[50.0,1],[66.7,1],[100.0,1],[100.0,1],[50.0,1],[33.3,1],[100.0,1],[75.0,1],[83.3,0],[75.0,1],[50.0,1],[100.0,1],[100.0,1],[50.0,1],[83.3,1],[100.0,1],[100.0,1],[50.0,0],[33.3,1],[75.0,1],[100.0,0],[100.0,1],[83.3,1],[100.0,1],[100.0,1],[75.0,1],[100.0,1],[50.0,1],[50.0,0],[0.0,0],[83.3,1],[100.0,1],[100.0,1],[100.0,1],[75.0,0],[83.3,1],[100.0,0],[75.0,1],[50.0,1],[100.0,1],[100.0,1],[100.0,0],[0.0,0],[100.0,0],[66.7,1],[75.0,1],[100.0,1],[75.0,1],[100.0,0],[100.0,1],[75.0,0],[75.0,1],[100.0,1],[0.0,0],[100.0,0],[83.3,1],[100.0,1],[50.0,0],[100.0,0],[100.0,1],[75.0,0],[50.0,0],[100.0,0],[100.0,1],[25.0,0],[100.0,1],[50.0,1],[100.0,0],[66.7,0],[50.0,0],[50.0,0],[83.3,1],[66.7,1],[100.0,0],[100.0,1],[50.0,0],[100.0,1],[50.0,0],[100.0,0],[50.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[75.0,0],[66.7,0],[83.3,1],[75.0,0],[50.0,0],[50.0,0],[83.3,1],[100.0,1],[100.0,1],[50.0,1],[100.0,1],[75.0,1],[100.0,0],[100.0,1],[50.0,1],[100.0,0],[100.0,1],[100.0,1],[25.0,1],[100.0,0],[75.0,0],[50.0,0],[50.0,1],[0.0,0],[33.3,0],[50.0,0],[50.0,0],[100.0,1],[75.0,1],[100.0,1],[100.0,1],[83.3,1],[50.0,1],[50.0,0],[100.0,0],[75.0,1],[75.0,1],[50.0,0],[25.0,0],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[83.3,0],[100.0,1],[100.0,0],[75.0,0],[50.0,1],[33.3,1],[100.0,0],[50.0,0],[75.0,1],[100.0,0],[100.0,0],[100.0,0],[100.0,1],[0.0,0],[50.0,0],[50.0,0],[83.3,1],[100.0,0],[83.3,1],[100.0,1],[100.0,1],[100.0,1],[50.0,0],[100.0,1],[83.3,0],[100.0,1],[50.0,1],[66.7,1],[50.0,1],[66.7,0],[100.0,0],[75.0,1],[83.3,1],[75.0,0],[50.0,1],[100.0,0],[100.0,1],[100.0,1],[100.0,1],[50.0,0],[0.0,0],[100.0,1],[100.0,1],[75.0,1],[100.0,0],[50.0,1],[50.0,1],[100.0,0],[100.0,1],[0.0,0],[100.0,0],[100.0,1],[50.0,1]];
+var DATA = [[100.0,1],[100.0,1],[100.0,1],[100.0,1],[62.5,0],[90.0,1],[100.0,1],[77.5,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,0],[75.0,0],[77.5,1],[100.0,1],[62.5,0],[100.0,1],[100.0,1],[100.0,1],[65.0,0],[100.0,1],[90.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,0],[25.0,0],[100.0,1],[100.0,1],[62.5,1],[100.0,1],[87.5,1],[100.0,0],[33.3,0],[100.0,1],[100.0,1],[50.0,0],[83.3,1],[56.7,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,0],[50.0,0],[66.7,0],[100.0,1],[100.0,0],[50.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[75.0,0],[100.0,1],[100.0,1],[100.0,1],[100.0,1],[100.0,1],[56.7,0],[100.0,1],[75.0,1],[15.0,0],[50.0,0],[100.0,1],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[25.0,1],[100.0,1],[100.0,1],[100.0,1],[100.0,0],[73.3,1],[100.0,0],[100.0,1],[75.0,1],[75.0,1],[100.0,0],[50.0,1],[100.0,1],[100.0,1],[75.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,0],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,0],[75.0,1],[100.0,1],[50.0,0],[100.0,1],[100.0,1],[75.0,0],[100.0,1],[100.0,0],[0.0,0],[40.0,0],[50.0,0],[100.0,0],[0.0,0],[90.0,0],[75.0,0],[100.0,0],[75.0,1],[83.3,1],[100.0,1],[75.0,1],[65.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[0.0,0],[100.0,1],[100.0,1],[100.0,0],[75.0,1],[100.0,1],[100.0,1],[0.0,0],[100.0,0],[66.7,1],[100.0,1],[100.0,1],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[83.3,1],[100.0,1],[100.0,0],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[40.0,0],[100.0,1],[40.0,1],[100.0,1],[100.0,1],[100.0,1],[25.0,0],[50.0,0],[100.0,0],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[100.0,0],[83.3,0],[100.0,1],[100.0,1],[100.0,1],[100.0,1],[50.0,0],[100.0,1],[40.0,1],[100.0,0],[75.0,1],[100.0,1],[100.0,0],[100.0,0],[100.0,0],[75.0,1],[90.0,0],[40.0,1],[83.3,1],[100.0,1],[100.0,1],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[100.0,0],[100.0,1],[100.0,1],[50.0,0],[50.0,0],[66.7,1],[50.0,1],[75.0,0],[75.0,1],[75.0,0],[75.0,0],[0.0,0],[100.0,1]];
 
 var $ = function (s, r) { return (r || document).querySelector(s); };
 var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
@@ -684,7 +684,7 @@ addEventListener('popstate', function () { go(location.hash === '#app' ? 'app' :
 
 /* ---------- histogram explorer (real data) ---------- */
 (function explorer() {
-    var levels = [0, 25, 33.3, 50, 66.7, 75, 83.3, 100];
+    var levels = DATA.map(function (d) { return d[0]; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
     var buckets = levels.map(function (l) { return { l: l, ok: 0, bad: 0 }; });
     var wrongTotal = 0;
     DATA.forEach(function (d) {
