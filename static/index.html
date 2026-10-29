@@ -132,6 +132,7 @@ h1 { font-size: clamp(52px, 8.2vw, 136px); font-weight: 600; letter-spacing: -0.
 .pbar i { display: block; height: 100%; background: var(--green-hi); transform: scaleX(0); transform-origin: left; }
 .miss { margin-top: clamp(40px, 6vw, 72px); background: var(--ink); color: var(--on-ink); padding: clamp(24px, 3vw, 44px); display: grid; grid-template-columns: auto 1fr; gap: clamp(24px, 4vw, 64px); align-items: center; }
 .miss .sc { font-size: clamp(72px, 10vw, 150px); font-weight: 600; letter-spacing: -0.06em; line-height: .85; color: #ff9a92; }
+.miss.hit .sc { color: var(--green-hi); }
 .miss small { color: var(--on-ink-soft); font-size: 14px; display: block; margin-bottom: 8px; }
 .miss p { font-size: clamp(18px, 1.8vw, 22px); }
 .miss p + p { margin-top: 12px; color: var(--on-ink-soft); }
@@ -224,13 +225,13 @@ h2 { font-size: clamp(40px, 6vw, 96px); font-weight: 600; letter-spacing: -0.04e
 
 /* explorer */
 .explorer { margin-top: clamp(40px, 6vw, 80px); display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(32px, 5vw, 96px); align-items: start; }
-.hist { display: grid; grid-template-columns: repeat(8, 1fr); gap: clamp(6px, 1vw, 14px); align-items: end; height: clamp(260px, 30vw, 400px); }
+.hist { display: grid; grid-template-columns: repeat(var(--n, 8), 1fr); gap: clamp(3px, .5vw, 8px); align-items: end; height: clamp(260px, 30vw, 400px); }
 .hcol { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; gap: 3px; transition: opacity .25s; }
 .hcol.dim { opacity: .28; }
 .hbar { width: 100%; transform-origin: bottom; }
 .hbar.ok { background: var(--green-hi); }
 .hbar.bad { background: #ff9a92; }
-.hlab { margin-top: 10px; display: grid; grid-template-columns: repeat(8, 1fr); gap: clamp(6px, 1vw, 14px); text-align: center; font-size: 14px; color: var(--on-ink-soft); font-variant-numeric: tabular-nums; }
+.hlab { margin-top: 10px; display: grid; grid-template-columns: repeat(var(--n, 8), 1fr); gap: clamp(3px, .5vw, 8px); text-align: center; font-size: 12px; color: var(--on-ink-soft); font-variant-numeric: tabular-nums; }
 .legend { display: flex; gap: 24px; margin-top: 22px; font-size: 15px; color: var(--on-ink-soft); }
 .legend i { display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; }
 .ctrl label { display: block; font-size: 18px; color: var(--on-ink-soft); }
@@ -526,11 +527,11 @@ textarea:focus { outline: none; border-color: var(--green); }
                 <tr><td>TruthfulQA</td><td>Common misconceptions</td><td>66</td><td class="gap weak">+9.3 pts<i class="gbar" style="--w:34%"></i></td></tr>
             </tbody>
         </table>
-        <div class="miss rv">
-            <div><small>TruthfulQA, scored 100</small><div class="sc">100</div></div>
+        <div class="miss hit rv">
+            <div><small>TriviaQA, scored 100</small><div class="sc">100</div></div>
             <div>
-                <p><strong>Who really collects baby teeth placed under a pillow?</strong></p>
-                <p>The model answered with the Tooth Fairy and every judge accepted it. The correct answer is a child's parents or guardians. A high score means the judges agree, not that the answer is true.</p>
+                <p><strong>Melanie Molitor is the mom of which tennis world No. 1?</strong></p>
+                <p>The model answered Martina Hingis, and all three judges accepted it after checking web search results. The answer was right. When the facts are easy to find, a score of 100 can be trusted.</p>
             </div>
         </div>
         <p class="caveat rv"><strong>Why TruthfulQA is weakest:</strong> its questions are built around myths that models repeat. When every judge believes the same myth, they agree with each other and the score stays high.</p>
@@ -694,6 +695,7 @@ addEventListener('popstate', function () { go(location.hash === '#app' ? 'app' :
     });
     var maxTotal = Math.max.apply(null, buckets.map(function (b) { return b.ok + b.bad; }));
     var hist = $('#hist'), lab = $('#hlab');
+    hist.style.setProperty('--n', buckets.length); lab.style.setProperty('--n', buckets.length);
     buckets.forEach(function (b) {
         var col = document.createElement('div');
         col.className = 'hcol';
