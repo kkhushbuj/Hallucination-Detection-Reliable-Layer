@@ -146,6 +146,10 @@ h1 { font-size: clamp(52px, 8.2vw, 136px); font-weight: 600; letter-spacing: -0.
 .curtain { display: none; }
 .js .curtain { display: flex; position: fixed; inset: 0; z-index: 500; background: var(--green); color: #fff; align-items: center; justify-content: center; font-size: clamp(32px, 6vw, 80px); font-weight: 600; letter-spacing: -0.04em; overflow: hidden; }
 .curtain span { display: block; }
+/* the panel eases in on a refresh, and the title stays hidden until its own entrance runs, so nothing pops into place first */
+.js .curtain { animation: curtainIn .7s ease both; }
+.js .curtain span { opacity: 0; }
+@keyframes curtainIn { from { opacity: 0; } }
 .cmp { margin-top: clamp(40px, 6vw, 80px); display: grid; gap: 14px; max-width: 980px; }
 .cmp-row { display: grid; grid-template-columns: 160px 1fr 64px; gap: 20px; align-items: center; font-size: 16px; color: var(--on-ink-soft); }
 .cmp-row b { color: var(--on-ink); font-size: 24px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; text-align: right; }
@@ -691,7 +695,10 @@ $$('a[href^="#"]').forEach(function (a) {
         var t = $(a.getAttribute('href'));
         if (!t) return;
         e.preventDefault();
-        if (lenis) lenis.scrollTo(t, { offset: -72, duration: 1.2 }); else glideTo(t.getBoundingClientRect().top + scrollY - 72, 900);
+        // Travel time grows with distance (the pinned scene adds thousands of pixels), so a long trip reads as a glide, not a jump.
+        var dist = Math.abs(t.getBoundingClientRect().top - 72), secs = Math.min(3.2, Math.max(1.2, dist / 1600));
+        if (lenis) lenis.scrollTo(t, { offset: -72, duration: secs, easing: function (x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; } });
+        else glideTo(t.getBoundingClientRect().top + scrollY - 72, secs * 1000);
     });
 });
 // Fallback glide for in-page links when Lenis is off (reduced-motion or CDN blocked); a click just eases there instead of jumping.
@@ -913,10 +920,10 @@ if (hasGsap && !reduce) {
     var cur = $('#curtain'), skipCurtain = location.hash === '#app';
     if (skipCurtain) cur.style.display = 'none';
     else gsap.timeline({ onComplete: function () { cur.style.display = 'none'; } })
-        .from('#curtainTxt', { yPercent: 120, duration: .8, ease: 'power4.out' })
-        .to('#curtainTxt', { yPercent: -120, duration: .5, ease: 'power3.in' }, '+=.2')
-        .to(cur, { yPercent: -100, duration: .9, ease: 'power4.inOut' }, '-=.15');
-    gsap.timeline({ defaults: { ease: 'power4.out' }, delay: skipCurtain ? .15 : 2 })
+        .fromTo('#curtainTxt', { yPercent: 40, opacity: 0 }, { yPercent: 0, opacity: 1, duration: .9, ease: 'power3.out' }, .25)
+        .to('#curtainTxt', { yPercent: -40, opacity: 0, duration: .5, ease: 'power2.in' }, '+=.2')
+        .to(cur, { yPercent: -100, duration: 1.05, ease: 'power4.inOut' }, '-=.2');
+    gsap.timeline({ defaults: { ease: 'power4.out' }, delay: skipCurtain ? .15 : 2.3 })
         .to('#heroTitle .line > span', { yPercent: 0, duration: 1.1, stagger: .12 })
         .to('.hero .rv', { opacity: 1, y: 0, duration: .9, stagger: .12 }, '-=.7')
         .from('#uiFill', { scaleX: 0, duration: 1.4, ease: 'power3.out' }, '-=.6')
