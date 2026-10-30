@@ -15,7 +15,8 @@ class QuestionRequest(BaseModel):
 
 @app.get("/")
 async def serve_home():
-    return FileResponse("static/index.html")
+    # no-cache makes the browser recheck the page on every load, so edits show up without a hard refresh.
+    return FileResponse("static/index.html", headers={"Cache-Control": "no-cache"})
 
 
 @app.post("/api/verify")
