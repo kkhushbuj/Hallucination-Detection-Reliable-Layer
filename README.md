@@ -1,5 +1,7 @@
 # LLM Reliability Layer
 
+**Live site:** https://trust.145-241-213-220.sslip.io
+
 Scores how much you can trust an LLM's answer instead of accepting it at face value. Ask any question and get back the answer, a 0–100% **Trust Score**, a plain-English confidence label, and a written explanation of why.
 
 The score combines two independent signals: whether *other* models agree the answer is correct (cross-model judgment, grounded with a web search), and whether the answer stays the same when the question is asked again (self-consistency).
