@@ -652,6 +652,12 @@ var $ = function (s, r) { return (r || document).querySelector(s); };
 var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var hasGsap = !!(window.gsap && window.ScrollTrigger);
+// if the animation library failed to load, or the opening curtain somehow never lifts, show the page as plain content
+if (!hasGsap) document.documentElement.classList.remove('js');
+setTimeout(function () {
+    var c = document.getElementById('curtain');
+    if (c && c.style.display !== 'none') document.documentElement.classList.remove('js');
+}, 7000);
 // Always open at the top after a refresh instead of letting the browser restore the old scroll position.
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 if (!location.hash || location.hash === '#app') scrollTo(0, 0);
