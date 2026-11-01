@@ -42,7 +42,7 @@ cp .env.example .env        # then fill in the keys
 uvicorn server:app --reload --port 8000
 ```
 
-Open http://localhost:8000. The API is `POST /api/verify` with `{"question": "..."}`.
+Open http://localhost:8000. The API is `POST /api/verify` with `{"question": "..."}`. `GET /health` returns `{"status": "ok"}`.
 
 Run the tests (no API keys needed):
 
@@ -53,41 +53,53 @@ pytest
 
 ## Evaluation
 
-`evaluation/evaluate.py` runs a fixed 200-question set drawn with seed 42 from three public benchmarks: TruthfulQA (common misconceptions), HaluEval (hallucination) and TriviaQA (factual recall). A separate grader model compares each final answer with the benchmark's reference answer. The grader is from a lab that plays no part in the scoring pipeline.
+`evaluation/evaluate.py` runs a fixed 200-question set drawn from three public benchmarks: TruthfulQA (common misconceptions), HaluEval (hallucination) and TriviaQA (factual recall). A separate grader model (Claude Haiku 5.5) compares each final answer with the benchmark's reference answer. The grader is from a lab that plays no part in the scoring pipeline.
 
 ```bash
-python evaluation/evaluate.py --batch 1   # batches 1-4, 50 questions each
-python evaluation/evaluate.py --backfill  # retry failed rows, then merge
+python evaluation/evaluate.py --seed 7 --batch 1   # batches 1-4, 50 questions each
+python evaluation/evaluate.py --seed 7 --backfill  # retry failed rows, then merge
 ```
 
-**Baseline (earlier version).** A first full run used a different setup: judges Qwen3.8-27B, Cohere command-a and gpt-oss-120b, with no web search and no tie-breaker, and Qwen as the grader. It is on the `local-backtest-code` branch.
+The default seed (42) reproduces the earlier baseline questions. Any other seed draws a fresh 200 that share no question with the baseline set, and writes its own result files (`results_seed7_*.csv`).
+
+**Current results** (seed 7, 200 fresh questions, current lineup with web search and tie-breaker):
 
 | Metric | Result |
 |---|---|
-| Accuracy | 60.0% (120/200) |
-| Average Trust Score, correct answers | 93.9% |
-| Average Trust Score, incorrect answers | 78.0% |
-| Gap | 15.9 points |
+| Writer accuracy | 61.0% (122/200) |
+| Average Trust Score, correct answers | 93.1 |
+| Average Trust Score, incorrect answers | 74.9 |
+| Gap | 18.1 points (95% interval 11.1–25.5) |
+| AUROC (correct vs incorrect) | 0.674 (95% interval 0.604–0.740) |
 
 | Dataset | Accuracy |
 |---|---|
-| TruthfulQA | 56.1% (37/66) |
-| HaluEval | 45.5% (30/66) |
-| TriviaQA | 77.9% (53/68) |
+| TruthfulQA | 68.2% (45/66) |
+| HaluEval | 43.9% (29/66) |
+| TriviaQA | 70.6% (48/68) |
 
-The current lineup (web search, tie-breaker, new judges) has not been measured yet, so no results are claimed for it.
+| Label | Share of answers that were correct |
+|---|---|
+| High confidence | 71.1% |
+| Medium confidence | 55.0% |
+| Low confidence | 26.3% |
+
+The labels are ordered as intended, but the score is **not a calibrated probability**: 28.0% of the answers that scored 100 were wrong, and the Brier score (0.272) is worse than always predicting the base rate (0.238). Discrimination is weakest on TruthfulQA (AUROC 0.568). The full analysis is in the paper.
+
+**Baseline (earlier version).** A first run on the seed-42 questions used a different setup: judges Qwen3.8-27B, Cohere command-a and gpt-oss-120b, with no web search and no tie-breaker, and Qwen as the grader. It reached 60.0% accuracy and a 15.9-point gap, and is on the `local-backtest-code` branch.
 
 ## Known limitations
 
-- The score measures agreement between models, not truth. If every judge shares the same wrong belief, the score will not catch it. Web search and the tie-breaker are there to reduce this, but their effect is not yet measured.
+- The score measures agreement between models, not truth. If every judge shares the same wrong belief, the score will not catch it. The judges come from three labs, but models from different labs still make correlated errors, which fits the 28% of wrong answers at the top score.
+- The score ranks answers better than chance but is not a calibrated probability. Use the label as a rough guide, not a guarantee.
 - A model cannot be scored correct on something it does not know. HaluEval's multi-hop trivia is the clearest case.
 - Results come from one 200-question sample and one run. LLM calls are probabilistic, so figures vary between runs (`evaluation/stability_check.py` measures this).
-- The server has no authentication or rate limiting, and every question makes about 20 API calls. Put it behind a gate before exposing it publicly.
+- The server limits each visitor to 6 requests per minute and runs at most 8 questions at once, but it has no login. Every question makes about 20 API calls, so a public deployment still spends your LLM quota.
 
 ## Project structure
 
 ```
-├── server.py                    FastAPI app: serves the site, POST /api/verify
+├── server.py                    FastAPI app: site, POST /api/verify, GET /health, rate limit
 ├── static/index.html            Web UI
 ├── graph.py                     LangGraph pipeline definition
 ├── config.py                    Models, thresholds, feature flags
