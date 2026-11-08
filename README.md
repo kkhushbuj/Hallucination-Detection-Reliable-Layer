@@ -12,7 +12,7 @@ The score combines two independent signals: whether *other* models agree the ans
 2. **Check agreement** — Gemini 3.5 Flash-Lite compares the 3 answers in pairs and decides whether they reach the same conclusion. Each answer gets a consistency value: the share of the *other* answers that agree with it.
 3. **Ground with a web search** — for each answer, Tavily searches the question plus that answer, and the top results are added to every judge's prompt.
 4. **Judge** — each answer is judged `CORRECT` or `HALLUCINATED` by three models from three labs: Qwen3.8-27B (Groq), Mistral Medium 3.5 and Llama 3.3 70B (both via OpenRouter).
-5. **Score** — every judge that responds and the consistency value each get an equal share of the score. A failed judge is dropped and the shares rebalance. The best-scoring answer wins.
+5. **Score** — every judge that responds and the consistency value each get an equal share of the score. A failed judge is dropped and the shares rebalance. If every judge fails, the score uses consistency only, so three answers that agree can still score 100 with no judge having confirmed them. The best-scoring answer wins.
 6. **Tie-break** — NVIDIA Nemotron 3.5 Lightning checks only the winning answer. If it disagrees with the judge majority, the score drops by 10 points and a caution is shown.
 
 | Score | Label |
@@ -50,6 +50,8 @@ Run the tests (no API keys needed):
 pip install -r requirements-dev.txt
 pytest
 ```
+
+The tests cover only the scoring maths: verdict parsing, the score formula (including a failed judge) and the consistency calculations. They never call a model, so they say nothing about whether the real models, web search, tie-breaker or server behave correctly.
 
 ## Evaluation
 
@@ -91,7 +93,8 @@ The labels are ordered as intended, but the score is **not a calibrated probabil
 ## Known limitations
 
 - The score measures agreement between models, not truth. If every judge shares the same wrong belief, the score will not catch it. The judges come from three labs, but models from different labs still make correlated errors, which fits the 28% of wrong answers at the top score.
-- The score ranks answers better than chance but is not a calibrated probability. Use the label as a rough guide, not a guarantee.
+- The score ranks answers better than chance (AUROC 0.674) but is not a calibrated probability: 28% of answers scoring 100 were still wrong. Use the label as a rough guide, not a guarantee.
+- If every judge fails, the score uses consistency only, so it can read 100 without any judge confirming the answer.
 - A model cannot be scored correct on something it does not know. HaluEval's multi-hop trivia is the clearest case.
 - Results come from one 200-question sample and one run. LLM calls are probabilistic, so figures vary between runs (`evaluation/stability_check.py` measures this).
 - The server limits each visitor to 6 requests per minute and runs at most 8 questions at once, but it has no login. Every question makes about 20 API calls, so a public deployment still spends your LLM quota.
