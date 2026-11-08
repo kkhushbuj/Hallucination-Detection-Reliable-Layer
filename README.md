@@ -86,7 +86,7 @@ The default seed (42) reproduces the earlier baseline questions. Any other seed 
 | Medium confidence | 55.0% |
 | Low confidence | 26.3% |
 
-The labels are ordered as intended, but the score is **not a calibrated probability**: 28.0% of the answers that scored 100 were wrong, and the Brier score (0.272) is worse than always predicting the base rate (0.238). Discrimination is weakest on TruthfulQA (AUROC 0.568). The full analysis is in the paper.
+The labels are ordered as intended, but the score is **not a calibrated probability**: 28.0% of the answers that scored 100 were wrong, and the Brier score (0.272) is worse than always predicting the base rate (0.238). Discrimination is weakest on TruthfulQA (AUROC 0.568). The full analysis is in the paper ([`paper_build/LLM_Trust_Score_final.pdf`](paper_build/LLM_Trust_Score_final.pdf), built from the sources in `paper_build/`).
 
 **Baseline (earlier version).** A first run on the seed-42 questions used a different setup: judges Qwen3.8-27B, Cohere command-a and gpt-oss-120b, with no web search and no tie-breaker, and Qwen as the grader. It reached 60.0% accuracy and a 15.9-point gap, and is on the `local-backtest-code` branch.
 
