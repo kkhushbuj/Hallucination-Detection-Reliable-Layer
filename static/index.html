@@ -495,7 +495,7 @@ textarea:focus { outline: none; border-color: var(--green); }
                 </div>
                 <div class="step" data-step="1">
                     <h3>Three judges vote</h3>
-                    <p>Qwen3 27B, Mistral Medium 3.5 and Llama 3.3 70B each decide, without seeing each other, whether every answer is correct or hallucinated. Each one reads fresh web search results first.</p>
+                    <p>Qwen3.8-27B, Mistral Medium 3.5 and Llama 3.3 70B each decide, without seeing each other, whether every answer is correct or hallucinated. Each one reads fresh web search results first.</p>
                 </div>
                 <div class="step" data-step="2">
                     <h3>Count what agrees</h3>
@@ -582,7 +582,7 @@ textarea:focus { outline: none; border-color: var(--green); }
         <h2 class="rv">Questions people ask.</h2>
         <div class="faq-list rv">
             <details class="faq"><summary>Does a high score mean the answer is true?<i aria-hidden="true"></i></summary><p class="ans-t">No. It means the judges and the three answers agree. On TruthfulQA the models often share the same myth, so a wrong answer can still score 100.</p></details>
-            <details class="faq"><summary>Which models are used?<i aria-hidden="true"></i></summary><p class="ans-t">GPT-4o-mini writes the three answers. Qwen3 27B, Mistral Medium 3.5 and Llama 3.3 70B judge each one using Tavily web search results, Gemini 3.5 Flash-Lite checks whether the answers reach the same conclusion, and Nemotron 3.5 Lightning double-checks the winner.</p></details>
+            <details class="faq"><summary>Which models are used?<i aria-hidden="true"></i></summary><p class="ans-t">GPT-4o-mini writes the three answers. Qwen3.8-27B, Mistral Medium 3.5 and Llama 3.3 70B judge each one using Tavily web search results, Gemini 3.5 Flash-Lite checks whether the answers reach the same conclusion, and Nemotron 3.5 Lightning double-checks the winner.</p></details>
             <details class="faq"><summary>What do the confidence labels mean?<i aria-hidden="true"></i></summary><p class="ans-t">A score of 80 or more is high confidence, 75 to 79 is medium, and anything below 75 is low. Treat medium and low scores as a reason to check another source.</p></details>
             <details class="faq"><summary>What if a model fails to respond?<i aria-hidden="true"></i></summary><p class="ans-t">The score is built from the judges that did respond, and failed attempts are listed in the result. If all three answers fail, the score is 0 with an error message.</p></details>
             <details class="faq"><summary>What kind of question works best?<i aria-hidden="true"></i></summary><p class="ans-t">Factual questions with one checkable answer, such as dates, places and names. It is weakest on common misconceptions and opinions.</p></details>
@@ -601,6 +601,7 @@ textarea:focus { outline: none; border-color: var(--green); }
     <div class="wrap">
         <nav class="foot-links" aria-label="Footer">
             <a href="#how">How it works</a><a href="#explore">Explore the data</a><a href="#results">Results</a><a href="#faq">Questions</a>
+            <a href="https://doi.org/10.5281/zenodo.23845729" target="_blank" rel="noopener">Paper</a><a href="https://github.com/kkhushbuj/Hallucination-Detection-Reliable-Layer" target="_blank" rel="noopener">Code</a>
             <button type="button" onclick="go('app')">Verify an answer</button>
             <button type="button" id="toTop">Back to top</button>
         </nav>

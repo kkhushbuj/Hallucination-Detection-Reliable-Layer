@@ -1,6 +1,6 @@
 # LLM Reliability Layer
 
-**Live site:** https://trust.145-241-213-220.sslip.io
+**Live site:** https://trust.145-241-213-220.sslip.io · **Paper:** [LLM Trust Score (Zenodo preprint)](https://doi.org/10.5281/zenodo.23845729)
 
 Scores how much you can trust an LLM's answer instead of accepting it at face value. Ask any question and get back the answer, a 0–100% **Trust Score**, a plain-English confidence label, and a written explanation of why.
 
@@ -18,7 +18,7 @@ The score combines two independent signals: whether *other* models agree the ans
 | Score | Label |
 |---|---|
 | 80% and above | High confidence |
-| 75–80% | Medium confidence |
+| 75% to below 80% | Medium confidence |
 | Below 75% | Low confidence |
 
 The writer, the judges, the agreement checker and the tie-breaker are all different models, so no model judges its own work. Web search and the tie-breaker can be switched off in `config.py` (`USE_WEB_SEARCH`, `USE_TIE_BREAKER`).
@@ -97,7 +97,7 @@ The labels are ordered as intended, but the score is **not a calibrated probabil
 - If every judge fails, the score uses consistency only, so it can read 100 without any judge confirming the answer.
 - A model cannot be scored correct on something it does not know. HaluEval's multi-hop trivia is the clearest case.
 - Results come from one 200-question sample and one run. LLM calls are probabilistic, so figures vary between runs (`evaluation/stability_check.py` measures this).
-- The server limits each visitor to 6 requests per minute and runs at most 8 questions at once, but it has no login. Every question makes about 20 API calls, so a public deployment still spends your LLM quota.
+- The server limits each visitor to 6 requests per minute and runs at most 8 questions at once, but it has no login. Every question makes about 16 model calls and 3 web searches, so a public deployment still spends your LLM quota.
 
 ## Project structure
 
